@@ -231,13 +231,13 @@ async def test_options_flow_configures_action_and_sources(hass) -> None:
             CONF_WOL_BROADCAST: "255.255.255.255",
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [action],
-            CONF_INPUT_SOURCES: {"hdmi1": ["input", "down", "ok"]},
+            CONF_INPUT_SOURCES: {"hdmi1": ["input", "left", "ok"]},
         },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_TURN_ON_ACTION] == [action]
-    assert entry.options[CONF_INPUT_SOURCES] == {"hdmi1": ["INPUT", "DOWN", "OK"]}
+    assert entry.options[CONF_INPUT_SOURCES] == {"hdmi1": ["INPUT", "LEFT", "OK"]}
 
 
 async def test_reconfigure_flow_updates_host(hass, mock_client) -> None:

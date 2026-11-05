@@ -135,7 +135,7 @@ async def test_send_named_and_raw_keys(tv) -> None:
     fake, client = tv
     await client.async_send_key("VOLUME_UP")
     await client.async_send_key("03")
-    await client.async_send_key("0x09")
+    await client.async_send_key("09")
 
     assert len(fake.commands) == 3
     assert "<value>02</value>" in fake.commands[0]
@@ -146,10 +146,12 @@ async def test_send_named_and_raw_keys(tv) -> None:
 async def test_send_key_rejects_unknown_key(tv) -> None:
     """Unknown key names and malformed codes are rejected."""
     _, client = tv
-    with pytest.raises(ValueError, match="Unsupported HDCP key"):
+    with pytest.raises(ValueError, match="Unsupported remote key"):
         await client.async_send_key("NOT_A_KEY")
-    with pytest.raises(ValueError, match="Unsupported HDCP key"):
+    with pytest.raises(ValueError, match="Unsupported remote key"):
         await client.async_send_key("123")
+    with pytest.raises(ValueError, match="Unsupported remote key"):
+        await client.async_send_key("1A")
 
 
 async def test_send_key_reauthenticates_once(tv) -> None:

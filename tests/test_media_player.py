@@ -75,7 +75,7 @@ async def test_entities_created(hass: HomeAssistant, setup_integration) -> None:
 
     assert len(media_players) == 1
     assert len(remotes) == 1
-    assert len(buttons) == 20
+    assert len(buttons) == 21
 
 
 async def test_turn_off_sends_power(hass: HomeAssistant, setup_integration) -> None:
@@ -139,11 +139,11 @@ async def test_remote_send_command(hass: HomeAssistant, setup_integration) -> No
     await hass.services.async_call(
         "remote",
         "send_command",
-        {"entity_id": remote_id, "command": ["HOME", "DOWN", "OK"]},
+        {"entity_id": remote_id, "command": ["HOME", "LEFT", "OK"]},
         blocking=True,
     )
 
-    LgHdcpClient.async_send_sequence.assert_awaited_with(["HOME", "DOWN", "OK"])
+    LgHdcpClient.async_send_sequence.assert_awaited_with(["HOME", "LEFT", "OK"])
 
 
 async def test_no_turn_on_feature_without_method(
@@ -231,8 +231,8 @@ async def test_turn_on_with_custom_action(
     [
         {
             CONF_INPUT_SOURCES: {
-                "HDMI1": ["INPUT", "DOWN", "OK"],
-                "HDMI2": ["INPUT", "DOWN", "DOWN", "OK"],
+                "HDMI1": ["INPUT", "LEFT", "OK"],
+                "HDMI2": ["INPUT", "LEFT", "LEFT", "OK"],
             }
         }
     ],
@@ -252,7 +252,7 @@ async def test_select_source_sends_sequence(
     )
 
     LgHdcpClient.async_send_sequence.assert_awaited_with(
-        ["INPUT", "DOWN", "DOWN", "OK"]
+        ["INPUT", "LEFT", "LEFT", "OK"]
     )
     assert hass.states.get(entity_id).attributes["source"] == "HDMI2"
 

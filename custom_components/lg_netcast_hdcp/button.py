@@ -27,17 +27,10 @@ BUTTONS: tuple[LgNetcastButtonDescription, ...] = (
         key="home", name="Home", command="HOME", icon="mdi:home"
     ),
     LgNetcastButtonDescription(
-        key="back", name="Back", command="BACK", icon="mdi:arrow-left"
-    ),
-    LgNetcastButtonDescription(
         key="ok", name="OK", command="OK", icon="mdi:check-circle-outline"
     ),
     LgNetcastButtonDescription(
         key="input", name="Input", command="INPUT", icon="mdi:import"
-    ),
-    LgNetcastButtonDescription(key="up", name="Up", command="UP", icon="mdi:arrow-up"),
-    LgNetcastButtonDescription(
-        key="down", name="Down", command="DOWN", icon="mdi:arrow-down"
     ),
     LgNetcastButtonDescription(
         key="left", name="Left", command="LEFT", icon="mdi:arrow-left"
@@ -56,6 +49,18 @@ BUTTONS: tuple[LgNetcastButtonDescription, ...] = (
         name="Channel down",
         command="CHANNEL_DOWN",
         icon="mdi:minus",
+    ),
+    LgNetcastButtonDescription(
+        key="q_menu", name="Q.Menu", command="Q_MENU", icon="mdi:menu"
+    ),
+    LgNetcastButtonDescription(
+        key="timer", name="Timer", command="TIMER", icon="mdi:timer-outline"
+    ),
+    LgNetcastButtonDescription(
+        key="tv_radio", name="TV/Radio", command="TV_RADIO", icon="mdi:radio"
+    ),
+    LgNetcastButtonDescription(
+        key="exit", name="Exit", command="EXIT", icon="mdi:exit-to-app"
     ),
     *(
         LgNetcastButtonDescription(

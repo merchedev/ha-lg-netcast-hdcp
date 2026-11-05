@@ -36,6 +36,7 @@ DEFAULT_TURN_ON_METHOD: Final = TURN_ON_METHOD_NONE
 DEFAULT_WOL_BROADCAST: Final = "255.255.255.255"
 DEFAULT_WOL_PORT: Final = 9
 WOL_MAC_PATTERN: Final = r"^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$"
+RAW_KEY_PATTERN: Final = r"^\d{2}$"
 
 HDCP_ERROR: Final = "HDCPError"
 HDCP_ERROR_DETAIL: Final = "HDCPErrorDetail"
@@ -75,6 +76,7 @@ __all__ = [
     "NAME",
     "PAIRING_KEY_LENGTH",
     "PAIRING_KEY_PATTERN",
+    "RAW_KEY_PATTERN",
     "TURN_ON_METHODS",
     "TURN_ON_METHOD_ACTION",
     "TURN_ON_METHOD_BOTH",

@@ -42,8 +42,9 @@ firmware 0001.0009):
 - Session response contains `<session>...</session>`.
 - Command body:
   `<?xml version="1.0" encoding="utf-8"?><command><session>SESSION</session><type>HandleKeyInput</type><value>CODE</value></command>`
-- Key codes are two-digit hexadecimal strings. `VOLUME_UP` is `02`, not `24`
-  (decimal `24` belongs to the newer ROAP protocol).
+- Key codes are two-digit **decimal** strings from `00` to `99`. The TV parser
+  stops at the first non-digit, so `1A` is treated as `1` and `100` is invalid.
+- The 42LW650S-ZC decimal map is recorded in `docs/keycodes.md`.
 - The session becomes invalid when the television enters standby. Re-run
   `AuthReq` with the stored pairing key after the television is powered on.
 - Some firmware may invalidate the pairing key after standby or a factory
@@ -59,12 +60,12 @@ firmware 0001.0009):
   lifecycle, one automatic reauthentication retry, and key-code validation.
 - `config_flow.py`: manual host setup, pairing, reauthentication,
   reconfiguration, and options for power-on behavior and input sequences.
-- `media_player.py`: TV entity. Power off, volume, mute, playback, channel
-  tuning, configured input sources, and conditional power-on.
+- `media_player.py`: TV entity. Power off, volume, mute, channel tuning,
+  configured input sources, and conditional power-on.
 - `button.py`: remote-key buttons for common navigation, input, channel, and
   digit keys.
 - `remote.py`: generic key sender. Accepts names such as `VOLUME_UP` and raw
-  two-digit hexadecimal codes.
+  two-digit decimal codes from `00` to `99`.
 - `wol.py`: Wake-on-LAN magic packet helper.
 - `profiles.py`: model/protocol profiles and key maps. Adding a model should
   mean adding a profile, not changing integration logic.

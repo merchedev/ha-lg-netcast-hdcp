@@ -93,17 +93,17 @@ def _command_body(session: str, code: str) -> str:
 
 
 def _resolve_key(value: str) -> str:
-    """Resolve a key name or hexadecimal code."""
+    """Resolve a key name or a two-digit decimal code."""
     candidate = value.strip().upper()
-    if candidate.startswith("0X"):
-        candidate = candidate[2:]
     if candidate in HDCP_KEYS:
         return HDCP_KEYS[candidate]
     if candidate in HDCP_KEY_ALIASES:
         return HDCP_KEY_ALIASES[candidate]
-    if len(candidate) == 2 and all(char in "0123456789ABCDEF" for char in candidate):
+    if len(candidate) == 2 and candidate.isdigit():
         return candidate
-    raise ValueError(f"Unknown key: {value}")
+    raise ValueError(
+        f"Unknown key: {value}; use a name or a decimal code from 00 to 99"
+    )
 
 
 def _print_keys() -> None:

@@ -21,6 +21,7 @@ from .const import (
     HDCP_ERROR_OK,
     HDCP_KEY_ALIASES,
     HDCP_SESSION,
+    RAW_KEY_PATTERN,
 )
 from .profiles import DEFAULT_PROFILE, TvProfile
 
@@ -28,7 +29,7 @@ _LOGGER = logging.getLogger(__name__)
 
 _HEADERS: Final = {"Content-Type": "application/atom+xml"}
 _XML_DECLARATION: Final = '<?xml version="1.0" encoding="utf-8"?>'
-_HEX_KEY_PATTERN: Final = re.compile(r"^[0-9A-Fa-f]{2}$")
+_RAW_KEY_PATTERN: Final = re.compile(RAW_KEY_PATTERN)
 _AUTH_ERROR_CODES: Final = {"401", "403"}
 
 
@@ -198,14 +199,14 @@ class LgHdcpClient:
     def _resolve_key(self, key: str) -> str:
         """Resolve a key name or a two-digit hexadecimal code."""
         candidate = str(key).strip().upper()
-        if candidate.startswith("0X"):
-            candidate = candidate[2:]
 
         if candidate in self.profile.keys:
             return self.profile.keys[candidate]
         if candidate in HDCP_KEY_ALIASES:
             return HDCP_KEY_ALIASES[candidate]
-        if _HEX_KEY_PATTERN.fullmatch(candidate):
+        if _RAW_KEY_PATTERN.fullmatch(candidate):
             return candidate
 
-        raise ValueError(f"Unsupported HDCP key: {key}")
+        raise ValueError(
+            "Unsupported remote key; use a key name or a decimal code from 00 to 99"
+        )

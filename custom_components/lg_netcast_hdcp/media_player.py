@@ -46,9 +46,6 @@ BASE_FEATURES = (
     MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
-    | MediaPlayerEntityFeature.PLAY
-    | MediaPlayerEntityFeature.PAUSE
-    | MediaPlayerEntityFeature.STOP
     | MediaPlayerEntityFeature.PLAY_MEDIA
 )
 
@@ -187,18 +184,6 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         await self._async_send("MUTE")
         self._attr_is_volume_muted = mute
         self.async_write_ha_state()
-
-    async def async_media_play(self) -> None:
-        """Send play."""
-        await self._async_send("PLAY")
-
-    async def async_media_pause(self) -> None:
-        """Send pause."""
-        await self._async_send("PAUSE")
-
-    async def async_media_stop(self) -> None:
-        """Send stop."""
-        await self._async_send("STOP")
 
     async def async_select_source(self, source: str) -> None:
         """Run the configured key sequence for an input source."""

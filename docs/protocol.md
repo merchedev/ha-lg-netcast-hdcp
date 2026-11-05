@@ -93,6 +93,10 @@ particular key was handled.
 
 ## Key codes
 
+The television parses the value as a **decimal number** and stops at the first
+non-digit character. Send two-digit decimal strings from `00` to `99`; values
+above `99` and letter suffixes are not valid separate codes.
+
 | Name | Code |
 |---|---|
 | POWER | `08` |
@@ -101,32 +105,21 @@ particular key was handled.
 | MUTE | `09` |
 | CHANNEL_UP | `00` |
 | CHANNEL_DOWN | `01` |
-| INPUT | `0B` |
-| UP | `40` |
-| DOWN | `41` |
 | LEFT | `07` |
 | RIGHT | `06` |
-| OK | `44` |
-| BACK | `28` |
-| EXIT | `5B` |
-| MENU | `43` |
-| HOME | `23` |
-| NETCAST | `59` |
-| GUIDE | `A9` |
-| INFO | `AA` |
-| PLAY | `B0` |
-| PAUSE | `BA` |
-| STOP | `B1` |
-| REWIND | `8F` |
-| FAST_FORWARD | `8E` |
-| RECORD | `BD` |
-| RED | `72` |
-| GREEN | `71` |
-| YELLOW | `63` |
-| BLUE | `61` |
-| NUMBER_0 … NUMBER_9 | `10` … `19` |
+| INPUT | `11` |
+| Q_MENU | `10` |
+| TIMER | `14` |
+| TV_RADIO | `15` |
+| OK | `68` |
+| EXIT | `40` |
+| HOME | `67` |
+| NUMBER_0 … NUMBER_9 | `16`–`19`, `20`–`25` |
+| BLUE | `97` |
+| YELLOW | `99` |
 
-The complete map lives in
+The complete tested matrix, including unknown codes, is in
+[`docs/keycodes.md`](keycodes.md). The integration map lives in
 `custom_components/lg_netcast_hdcp/keys.py`.
 
 ## Error handling
@@ -155,7 +148,6 @@ configured, the turn-on feature is hidden.
 ## References
 
 - `lgcommander` by melka: original 2011 HDCP pairing and command flow.
-- `service.lgtv.remote` key codes: HDCP hexadecimal key table.
 - Home Assistant community thread "Support for pre 2012 models LG Netcast TV's
   needed".
 - LG UDAP documentation for the related 2012+ protocol.

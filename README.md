@@ -49,9 +49,9 @@ and IR actions are user configuration and are never hardcoded.
 
 - Turn off the TV.
 - Volume up/down and mute.
-- Play, pause, and stop.
 - Tune to a channel by number.
-- Buttons for Home, Back, OK, Input, navigation, channels, and digits.
+- Buttons for Home, OK, Input, Left/Right, channels, Q.Menu, Timer, TV/Radio,
+  Exit, and digits.
 - Configurable input-source key sequences.
 - Optional Wake-on-LAN or custom-action power-on.
 - Send any supported remote key through a `remote` entity.
@@ -144,18 +144,19 @@ disconnected inputs may be disabled. Configure input sources in the same
 input_sources:
   HDMI1:
     - INPUT
-    - DOWN
+    - LEFT
     - OK
   HDMI2:
     - INPUT
-    - DOWN
-    - DOWN
+    - LEFT
+    - LEFT
     - OK
 ```
 
 Names and sequences are user-defined. When configured, the media player exposes
-a source selector. If no sources are configured, the `INPUT`, arrow, and `OK`
-buttons remain available.
+a source selector. The example is illustrative: use only navigation keys that
+are confirmed on your television. This model profile does not yet include
+Up/Down, so input navigation may require a different sequence or remain manual.
 
 ### HDMI-CEC and RS-232C
 
@@ -173,7 +174,6 @@ buttons remain available.
 - `turn_off`
 - `volume_up` / `volume_down`
 - `volume_mute`
-- `media_play` / `media_pause` / `media_stop`
 - `play_media` with `media_content_type: channel`
 - `select_source` for user-configured input sequences
 
@@ -181,12 +181,12 @@ buttons remain available.
 
 Buttons are created for:
 
-`Home`, `Back`, `OK`, `Input`, `Up`, `Down`, `Left`, `Right`,
-`Channel up`, `Channel down`, and digits `0`–`9`.
+`Home`, `OK`, `Input`, `Left`, `Right`, `Channel up`, `Channel down`,
+`Q.Menu`, `Timer`, `TV/Radio`, `Exit`, and digits `0`–`9`.
 
 ### `remote`
 
-The remote entity accepts key names and raw hexadecimal codes:
+The remote entity accepts confirmed key names and raw decimal codes:
 
 ```yaml
 action: remote.send_command
@@ -195,19 +195,22 @@ target:
 data:
   command:
     - HOME
-    - DOWN
+    - LEFT
     - OK
 ```
 
 Supported names include:
 
 `POWER`, `VOLUME_UP`, `VOLUME_DOWN`, `MUTE`, `CHANNEL_UP`, `CHANNEL_DOWN`,
-`UP`, `DOWN`, `LEFT`, `RIGHT`, `OK`, `BACK`, `EXIT`, `MENU`, `HOME`, `INPUT`,
-`NETCAST`, `GUIDE`, `INFO`, `PLAY`, `PAUSE`, `STOP`, `REWIND`,
-`FAST_FORWARD`, `RECORD`, `RED`, `GREEN`, `YELLOW`, `BLUE`, and `NUMBER_0`
-through `NUMBER_9`.
+`LEFT`, `RIGHT`, `OK`, `EXIT`, `HOME`, `INPUT`, `Q_MENU`, `TIMER`,
+`TV_RADIO`, `LIST`, `INFO`, `PICTURE_MODE`, `AV_MODE`, `AV1`, `BLUE`,
+`YELLOW`, and `NUMBER_0` through `NUMBER_9`.
 
-Raw codes are two hexadecimal digits, for example `02` for volume up.
+Raw codes are two **decimal** digits from `00` to `99`, for example `02` for
+volume up. Codes above `99` and letter suffixes are rejected: the TV parser
+would silently interpret `1A` as `1`.
+
+See [docs/keycodes.md](docs/keycodes.md) for the full tested matrix.
 
 ## Reauthentication
 
@@ -249,14 +252,14 @@ feature is intentionally hidden.
 
 The input menu has to be open and the key sequence must match your TV's current
 input layout. Disconnected inputs are often disabled, so the number of
-`DOWN`/`UP` presses changes. Adjust `input_sources` with the `remote` entity or
-the `INPUT`/arrow/`OK` buttons, then update the sequence.
+navigation presses changes. Adjust `input_sources` with the `remote` entity or
+the confirmed navigation buttons, then update the sequence.
 
 ### Volume commands return `200 OK` but nothing happens
 
 The command endpoint returns `200` for accepted requests even when a key is not
-handled. Make sure you are using the HDCP hexadecimal codes (`02`, `03`), not
-the ROAP decimal codes (`24`, `25`).
+handled. Use the **decimal** codes confirmed for this model. Codes above `99`
+are not accepted, and letter suffixes are ignored by the TV parser.
 
 ## Debug logging
 
@@ -270,8 +273,8 @@ Pairing keys and session IDs are never logged.
 
 ## Protocol documentation
 
-See [docs/protocol.md](docs/protocol.md) for endpoints, XML payloads, key codes,
-and session behavior.
+See [docs/protocol.md](docs/protocol.md) for endpoints, XML payloads, and session
+behavior. See [docs/keycodes.md](docs/keycodes.md) for the tested key matrix.
 
 ## Development
 
