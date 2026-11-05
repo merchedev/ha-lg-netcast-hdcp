@@ -44,13 +44,5 @@
       "reauth_successful": "Reauthentication was successful.",
       "reconfigure_successful": "Reconfiguration was successful."
     }
-  },
-  "entity": {
-    "media_player": {
-      "name": "TV"
-    },
-    "remote": {
-      "name": "Remote"
-    }
   }
 }
