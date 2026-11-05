@@ -18,7 +18,7 @@ This integration fills that gap.
 
 ## Supported televisions
 
-Tested on:
+Developed and paired against:
 
 - LG 42LW650S-ZC (2011), NetCast 2.0, firmware 0001.0009.
 
@@ -59,6 +59,10 @@ official `lg_netcast` integration instead.
 - App launching and direct HDMI input selection are not available. You can send
   key sequences such as `INPUT`, `UP`, `DOWN`, and `OK`.
 - One pairing key is stored per TV. A factory reset changes the key.
+- Some firmware revisions invalidate the pairing key after standby. If yours
+  does this on every power cycle, the HDCP network protocol is not practical
+  for daily control; use IR or RS-232C for power and, if possible, keep the TV
+  on the network for the rest of the controls.
 
 ## Installation
 
