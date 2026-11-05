@@ -1,0 +1,56 @@
+{
+  "config": {
+    "flow_title": "LG NetCast HDCP TV",
+    "step": {
+      "user": {
+        "title": "LG NetCast HDCP TV",
+        "description": "Enter the IP address of the television. The TV must be on and connected to the same network as Home Assistant.",
+        "data": {
+          "host": "Host"
+        }
+      },
+      "pair": {
+        "title": "Pair with the TV",
+        "description": "The TV at {host} should now display a {length}-character pairing key. Enter it below.",
+        "data": {
+          "pairing_key": "Pairing key"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate with the TV",
+        "description": "The TV at {host} rejected the stored pairing key. Turn the TV on and enter the {length}-character key shown on screen.",
+        "data": {
+          "pairing_key": "Pairing key"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure the TV",
+        "description": "Update the IP address of the television.",
+        "data": {
+          "host": "Host"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not connect to the TV. Check the IP address, network, and that the TV is on.",
+      "invalid_auth": "The TV rejected the pairing key.",
+      "invalid_host": "Enter a valid IP address or hostname.",
+      "invalid_key": "The pairing key must be six letters or digits.",
+      "unknown": "Unexpected error while talking to the TV."
+    },
+    "abort": {
+      "already_configured": "This TV is already configured.",
+      "entry_not_found": "The config entry no longer exists.",
+      "reauth_successful": "Reauthentication was successful.",
+      "reconfigure_successful": "Reconfiguration was successful."
+    }
+  },
+  "entity": {
+    "media_player": {
+      "name": "TV"
+    },
+    "remote": {
+      "name": "Remote"
+    }
+  }
+}

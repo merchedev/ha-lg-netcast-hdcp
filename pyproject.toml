@@ -1,0 +1,55 @@
+[project]
+name = "ha-lg-netcast-hdcp"
+version = "0.1.0"
+description = "Home Assistant custom integration for LG NetCast 2.0 HDCP televisions"
+readme = "README.md"
+requires-python = ">=3.13"
+license = { text = "MIT" }
+authors = [{ name = "merchedev" }]
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest-homeassistant-custom-component==0.13.375"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+src = ["custom_components", "tests", "tools"]
+
+[tool.ruff.lint]
+select = [
+  "E",
+  "F",
+  "W",
+  "I",
+  "N",
+  "UP",
+  "B",
+  "ASYNC",
+  "C4",
+  "DTZ",
+  "PIE",
+  "PT",
+  "RUF",
+  "SIM",
+]
+ignore = [
+  "RUF001",
+  "RUF002",
+  "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+  "ignore::DeprecationWarning:pytest_homeassistant_custom_component.*",
+]
+
+[tool.coverage.run]
+source = ["custom_components/lg_netcast_hdcp"]

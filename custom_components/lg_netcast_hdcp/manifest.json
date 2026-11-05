@@ -1,0 +1,14 @@
+{
+  "domain": "lg_netcast_hdcp",
+  "name": "LG NetCast HDCP",
+  "codeowners": ["@merchedev"],
+  "config_flow": true,
+  "connectivity": ["network"],
+  "dependencies": ["network"],
+  "documentation": "https://github.com/merchedev/ha-lg-netcast-hdcp",
+  "integration_type": "device",
+  "iot_class": "local_polling",
+  "issue_tracker": "https://github.com/merchedev/ha-lg-netcast-hdcp/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}
