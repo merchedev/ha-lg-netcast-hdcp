@@ -57,14 +57,17 @@ firmware 0001.0009):
 
 - `hdcp.py`: protocol client. Owns HTTP, XML parsing, pairing, session
   lifecycle, one automatic reauthentication retry, and key-code validation.
-- `config_flow.py`: manual host setup, pairing, reauthentication, and
-  reconfiguration.
+- `config_flow.py`: manual host setup, pairing, reauthentication,
+  reconfiguration, and options for power-on behavior and input sequences.
 - `media_player.py`: TV entity. Power off, volume, mute, playback, channel
-  tuning, and the power-on trigger.
+  tuning, configured input sources, and conditional power-on.
+- `button.py`: remote-key buttons for common navigation, input, channel, and
+  digit keys.
 - `remote.py`: generic key sender. Accepts names such as `VOLUME_UP` and raw
   two-digit hexadecimal codes.
-- `triggers/turn_on.py`: device trigger used to run an external power-on
-  action (IR, WOL, CEC, RS-232C).
+- `wol.py`: Wake-on-LAN magic packet helper.
+- `profiles.py`: model/protocol profiles and key maps. Adding a model should
+  mean adding a profile, not changing integration logic.
 - `diagnostics.py`: redacted diagnostics. Pairing keys and sessions must never
   appear in the output.
 
@@ -73,11 +76,11 @@ firmware 0001.0009):
 - Use `ConfigEntry` runtime data.
 - Use `async_get_clientsession(hass)`; do not create a client session per
   request.
-- Use `PluggableAction` for the power-on trigger, matching the official
-  `lg_netcast` pattern.
+- Use an options flow for power-on behavior and input-source mappings.
+- Expose `TURN_ON` only when the user configured Wake-on-LAN or a custom action.
+- Never hardcode a user's MAC address, input names, input order, or IR action.
 - Use `assumed_state = True` because the TV does not report reliable power or
   volume state.
-- Keep the entity available when the TV is off so `turn_on` can be requested.
 - Keep config-entry data limited to host and pairing key. Sessions live in
   memory only.
 - Use translations for every user-facing config-flow string.

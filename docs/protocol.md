@@ -148,8 +148,9 @@ standby. Power-on requires one of:
 - HDMI-CEC,
 - RS-232C (`ka 01 01` on the 42LW650S).
 
-The integration exposes a `lg_netcast_hdcp.turn_on` device trigger so users can
-run the appropriate external action.
+The integration lets the user configure a Wake-on-LAN packet or a custom Home
+Assistant action (IR, CEC, RS-232C, or a script) for power-on. If neither is
+configured, the turn-on feature is hidden.
 
 ## References
 

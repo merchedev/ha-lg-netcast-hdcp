@@ -20,9 +20,9 @@ from .const import (
     HDCP_ERROR_DETAIL,
     HDCP_ERROR_OK,
     HDCP_KEY_ALIASES,
-    HDCP_KEYS,
     HDCP_SESSION,
 )
+from .profiles import DEFAULT_PROFILE, TvProfile
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -64,10 +64,12 @@ class LgHdcpClient:
         *,
         port: int = DEFAULT_PORT,
         timeout: float = DEFAULT_TIMEOUT,
+        profile: TvProfile = DEFAULT_PROFILE,
     ) -> None:
         """Initialize the client."""
         self.host = host
         self.pairing_key = pairing_key
+        self.profile = profile
         self.last_error: str | None = None
         self._session = session
         self._port = port
@@ -193,15 +195,14 @@ class LgHdcpClient:
         value_element = f"<value>{escape(value)}</value>" if value else ""
         return f"{_XML_DECLARATION}<auth><type>{auth_type}</type>{value_element}</auth>"
 
-    @staticmethod
-    def _resolve_key(key: str) -> str:
+    def _resolve_key(self, key: str) -> str:
         """Resolve a key name or a two-digit hexadecimal code."""
         candidate = str(key).strip().upper()
         if candidate.startswith("0X"):
             candidate = candidate[2:]
 
-        if candidate in HDCP_KEYS:
-            return HDCP_KEYS[candidate]
+        if candidate in self.profile.keys:
+            return self.profile.keys[candidate]
         if candidate in HDCP_KEY_ALIASES:
             return HDCP_KEY_ALIASES[candidate]
         if _HEX_KEY_PATTERN.fullmatch(candidate):

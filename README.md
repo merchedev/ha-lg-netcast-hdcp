@@ -38,12 +38,22 @@ six-character pairing key, this integration should work.
 Do not use this integration for 2012-2013 NetCast 3.0/4.0 televisions. Use the
 official `lg_netcast` integration instead.
 
+### Model profiles
+
+Protocol details and key maps live in `profiles.py`. The initial profile is
+`hdcp_2011`. Adding support for another model should mean adding a profile, not
+changing the integration logic. Input names, power-on methods, MAC addresses,
+and IR actions are user configuration and are never hardcoded.
+
 ## Features
 
 - Turn off the TV.
 - Volume up/down and mute.
 - Play, pause, and stop.
 - Tune to a channel by number.
+- Buttons for Home, Back, OK, Input, navigation, channels, and digits.
+- Configurable input-source key sequences.
+- Optional Wake-on-LAN or custom-action power-on.
 - Send any supported remote key through a `remote` entity.
 - Automatic session reauthentication after the TV wakes up.
 - Reauthentication and reconfiguration flows.
@@ -53,11 +63,14 @@ official `lg_netcast` integration instead.
 ## Limitations
 
 - **Power on is not possible over this protocol.** The HTTP server stops when
-  the TV enters standby. Use IR, Wake-on-LAN, HDMI-CEC, or RS-232C.
+  the TV enters standby. Configure Wake-on-LAN or a custom action (IR, CEC, or
+  RS-232C). If no method is configured, the turn-on feature is hidden.
 - Power and volume state are assumed. The TV does not expose reliable state
   through this API.
-- App launching and direct HDMI input selection are not available. You can send
-  key sequences such as `INPUT`, `UP`, `DOWN`, and `OK`.
+- Direct input selection is not exposed by the protocol. Input sources are
+  configured by the user as key sequences because the available inputs and the
+  number of navigation presses vary by installation. The `INPUT`, arrow, and
+  `OK` buttons are always available as a fallback.
 - One pairing key is stored per TV. A factory reset changes the key.
 - Some firmware revisions invalidate the pairing key after standby. If yours
   does this on every power cycle, the HDCP network protocol is not practical
@@ -85,61 +98,73 @@ Copy `custom_components/lg_netcast_hdcp` into your Home Assistant
 1. Make sure the TV is on and connected to the same network as Home Assistant.
 2. In Home Assistant, go to **Settings → Devices & services → Add integration**.
 3. Search for **LG NetCast HDCP**.
-4. Enter the TV's IP address.
+4. Enter the TV's IP address. Use a static IP or a DHCP reservation in your
+   router; if the TV's IP changes, the integration loses the connection.
 5. The TV displays a six-character pairing key.
 6. Enter that key in Home Assistant.
-7. The integration creates a media player and a remote entity.
+7. The integration creates a media player, a remote entity, and remote-key
+   buttons.
 
 The pairing key is stored in the config entry. The session is kept in memory and
 is renewed automatically when needed. Some firmware may invalidate the pairing
 key after standby or a factory reset; in that case Home Assistant starts the
 reauthentication flow and asks for the new key shown on screen.
 
+After setup, open the integration's **Configure** dialog to choose the power-on
+method and, optionally, define input sources.
+
 ## Power on
 
-The integration fires a `lg_netcast_hdcp.turn_on` device trigger whenever
-something requests the TV to turn on. Create an automation that performs the
-actual power-on action.
+Power-on is configured in **Settings → Devices & services → LG NetCast HDCP →
+Configure**. Choose one of:
 
-### Wake-on-LAN example
+- **None**: the turn-on feature is hidden. Turn-off still works over NetCast.
+- **Wake-on-LAN**: enter the TV's Ethernet MAC address, broadcast address, and
+  port. The integration sends a magic packet when `turn_on` is requested.
+- **Custom action**: select an existing Home Assistant action. This can be an
+  ESPHome IR service, a `remote.send_command`, an HDMI-CEC action, an RS-232C
+  script, or any other action. **An IR integration must already be configured
+  and working before selecting this option.**
+- **Both**: send Wake-on-LAN and then run the custom action.
 
-```yaml
-alias: Turn on the LG TV with Wake-on-LAN
-triggers:
-  - trigger: lg_netcast_hdcp.turn_on
-    entity_id: media_player.lg_tv
-actions:
-  - action: wake_on_lan.send_magic_packet
-    data:
-      mac: "AA:BB:CC:DD:EE:FF"
-```
+If no method is configured, no turn-on button is shown. Apagar always uses the
+NetCast HDCP protocol.
 
 Wake-on-LAN must be supported and enabled by the TV. Many 2011 models do not
-support it.
+support it; in that case use the custom-action/IR route.
 
-### IR example
+### Input sources
 
-Create a script that sends the LG power command through your IR blaster, then
-call it from the trigger:
+The HDCP protocol only exposes the `INPUT` key, not a command for a specific
+HDMI port. Available inputs and menu order vary between installations, and
+disconnected inputs may be disabled. Configure input sources in the same
+**Configure** dialog as a mapping of names to key sequences:
 
 ```yaml
-alias: Turn on the LG TV with IR
-triggers:
-  - trigger: lg_netcast_hdcp.turn_on
-    entity_id: media_player.lg_tv
-actions:
-  - action: script.turn_on_lg_tv_ir
+input_sources:
+  HDMI1:
+    - INPUT
+    - DOWN
+    - OK
+  HDMI2:
+    - INPUT
+    - DOWN
+    - DOWN
+    - OK
 ```
 
-The LG IR protocol is NEC. You can learn the original remote's power button with
-Broadlink, ESPHome, or another IR blaster.
+Names and sequences are user-defined. When configured, the media player exposes
+a source selector. If no sources are configured, the `INPUT`, arrow, and `OK`
+buttons remain available.
 
 ### HDMI-CEC and RS-232C
 
 - HDMI-CEC: use the `hdmi_cec` integration if Home Assistant is connected to the
-  TV through a CEC-capable adapter.
+  TV through a CEC-capable adapter. Select that action as the custom turn-on
+  action.
 - RS-232C: the 42LW650S has an RS-232C port. LG's serial protocol supports power
-  on (`ka 01 01`), power off (`ka 01 00`), volume, and input selection.
+  on (`ka 01 01`), power off (`ka 01 00`), volume, and input selection. Expose
+  it through a script or another integration and select that action.
 
 ## Entities
 
@@ -150,6 +175,14 @@ Broadlink, ESPHome, or another IR blaster.
 - `volume_mute`
 - `media_play` / `media_pause` / `media_stop`
 - `play_media` with `media_content_type: channel`
+- `select_source` for user-configured input sequences
+
+### `button`
+
+Buttons are created for:
+
+`Home`, `Back`, `OK`, `Input`, `Up`, `Down`, `Left`, `Right`,
+`Channel up`, `Channel down`, and digits `0`–`9`.
 
 ### `remote`
 
@@ -208,8 +241,16 @@ python3 tools/probe_hdcp.py --host TV_IP --pair
 
 ### The TV turns off but does not turn on
 
-Expected. The HDCP HTTP server stops in standby. Configure an external power-on
-action as described above.
+Expected. The HDCP HTTP server stops in standby. Configure Wake-on-LAN or a
+custom action in the integration options. If neither is configured, the turn-on
+feature is intentionally hidden.
+
+### Input selection does nothing
+
+The input menu has to be open and the key sequence must match your TV's current
+input layout. Disconnected inputs are often disabled, so the number of
+`DOWN`/`UP` presses changes. Adjust `input_sources` with the `remote` entity or
+the `INPUT`/arrow/`OK` buttons, then update the sequence.
 
 ### Volume commands return `200 OK` but nothing happens
 

@@ -6,17 +6,32 @@ import re
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST
+from homeassistant.core import callback
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.util.network import is_host_valid
 
 from .const import (
+    CONF_INPUT_SOURCES,
     CONF_PAIRING_KEY,
+    CONF_TURN_ON_ACTION,
+    CONF_TURN_ON_METHOD,
+    CONF_WOL_BROADCAST,
+    CONF_WOL_MAC,
+    CONF_WOL_PORT,
+    DEFAULT_TURN_ON_METHOD,
+    DEFAULT_WOL_BROADCAST,
+    DEFAULT_WOL_PORT,
     DOMAIN,
     PAIRING_KEY_LENGTH,
     PAIRING_KEY_PATTERN,
+    TURN_ON_METHOD_ACTION,
+    TURN_ON_METHOD_BOTH,
+    TURN_ON_METHOD_WOL,
+    TURN_ON_METHODS,
 )
 from .hdcp import (
     HdcpAuthError,
@@ -24,6 +39,7 @@ from .hdcp import (
     HdcpError,
     LgHdcpClient,
 )
+from .wol import normalize_mac
 
 PAIRING_KEY_SCHEMA = vol.Schema(
     {
@@ -64,6 +80,12 @@ class LgNetcastHdcpConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required(CONF_HOST): cv.string}),
             errors=errors,
         )
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Return the options flow."""
+        return LgNetcastHdcpOptionsFlow()
 
     async def async_step_pair(
         self, user_input: dict[str, Any] | None = None
@@ -226,3 +248,115 @@ class LgNetcastHdcpConfigFlow(ConfigFlow, domain=DOMAIN):
         finally:
             await client.async_close()
         return None
+
+
+class LgNetcastHdcpOptionsFlow(OptionsFlow):
+    """Configure power-on behavior and input sources."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage integration options."""
+        current = self.config_entry.options
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            method = user_input[CONF_TURN_ON_METHOD]
+            mac = user_input.get(CONF_WOL_MAC, "").strip()
+            action = user_input.get(CONF_TURN_ON_ACTION) or []
+            sources, source_error = self._normalize_sources(
+                user_input.get(CONF_INPUT_SOURCES)
+            )
+
+            if source_error:
+                errors[CONF_INPUT_SOURCES] = source_error
+            if not isinstance(action, list) or not all(
+                isinstance(item, dict) for item in action
+            ):
+                errors[CONF_TURN_ON_ACTION] = "invalid_action"
+            if method in (TURN_ON_METHOD_ACTION, TURN_ON_METHOD_BOTH) and not action:
+                errors[CONF_TURN_ON_ACTION] = "action_required"
+            if method in (TURN_ON_METHOD_WOL, TURN_ON_METHOD_BOTH):
+                if not mac:
+                    errors[CONF_WOL_MAC] = "mac_required"
+                else:
+                    try:
+                        normalize_mac(mac)
+                    except ValueError:
+                        errors[CONF_WOL_MAC] = "invalid_mac"
+
+            if not errors:
+                return self.async_create_entry(
+                    title="",
+                    data={
+                        CONF_TURN_ON_METHOD: method,
+                        CONF_WOL_MAC: mac,
+                        CONF_WOL_BROADCAST: user_input.get(
+                            CONF_WOL_BROADCAST, DEFAULT_WOL_BROADCAST
+                        ).strip()
+                        or DEFAULT_WOL_BROADCAST,
+                        CONF_WOL_PORT: user_input.get(CONF_WOL_PORT, DEFAULT_WOL_PORT),
+                        CONF_TURN_ON_ACTION: action,
+                        CONF_INPUT_SOURCES: sources or {},
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_TURN_ON_METHOD,
+                        default=current.get(
+                            CONF_TURN_ON_METHOD, DEFAULT_TURN_ON_METHOD
+                        ),
+                    ): vol.In(TURN_ON_METHODS),
+                    vol.Optional(
+                        CONF_WOL_MAC, default=current.get(CONF_WOL_MAC, "")
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_WOL_BROADCAST,
+                        default=current.get(CONF_WOL_BROADCAST, DEFAULT_WOL_BROADCAST),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_WOL_PORT,
+                        default=current.get(CONF_WOL_PORT, DEFAULT_WOL_PORT),
+                    ): vol.All(vol.Coerce(int), vol.Range(min=1, max=65535)),
+                    vol.Optional(
+                        CONF_TURN_ON_ACTION,
+                        default=current.get(CONF_TURN_ON_ACTION, []),
+                    ): selector.ActionSelector(),
+                    vol.Optional(
+                        CONF_INPUT_SOURCES,
+                        default=current.get(CONF_INPUT_SOURCES, {}),
+                    ): selector.ObjectSelector(),
+                }
+            ),
+            errors=errors,
+        )
+
+    @staticmethod
+    def _normalize_sources(
+        value: Any,
+    ) -> tuple[dict[str, list[str]] | None, str | None]:
+        """Validate and normalize the input source mapping."""
+        if value in (None, {}):
+            return {}, None
+        if not isinstance(value, dict):
+            return None, "invalid_sources"
+
+        normalized: dict[str, list[str]] = {}
+        for name, sequence in value.items():
+            if not isinstance(name, str) or not name.strip():
+                return None, "invalid_sources"
+            if not isinstance(sequence, list) or not sequence:
+                return None, "invalid_sources"
+
+            keys: list[str] = []
+            for key in sequence:
+                if not isinstance(key, str) or not key.strip():
+                    return None, "invalid_sources"
+                keys.append(key.strip().upper())
+            normalized[name.strip()] = keys
+
+        return normalized, None

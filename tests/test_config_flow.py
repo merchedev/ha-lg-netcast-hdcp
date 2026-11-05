@@ -6,7 +6,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from custom_components.lg_netcast_hdcp.const import (
+    CONF_INPUT_SOURCES,
     CONF_PAIRING_KEY,
+    CONF_TURN_ON_ACTION,
+    CONF_TURN_ON_METHOD,
+    CONF_WOL_BROADCAST,
+    CONF_WOL_MAC,
+    CONF_WOL_PORT,
     DOMAIN,
 )
 from custom_components.lg_netcast_hdcp.hdcp import (
@@ -144,6 +150,94 @@ async def test_user_flow_reports_connection_error(hass, mock_client) -> None:
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "cannot_connect"}
+
+
+async def test_options_flow_configures_wol(hass) -> None:
+    """Wake-on-LAN options are persisted."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "init"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_TURN_ON_METHOD: "wol",
+            CONF_WOL_MAC: "AA:BB:CC:DD:EE:FF",
+            CONF_WOL_BROADCAST: "192.168.1.255",
+            CONF_WOL_PORT: 9,
+            CONF_TURN_ON_ACTION: [],
+            CONF_INPUT_SOURCES: {},
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_TURN_ON_METHOD] == "wol"
+    assert entry.options[CONF_WOL_MAC] == "AA:BB:CC:DD:EE:FF"
+    assert entry.options[CONF_WOL_PORT] == 9
+
+
+async def test_options_flow_requires_mac_for_wol(hass) -> None:
+    """WOL without a MAC is rejected."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_TURN_ON_METHOD: "wol",
+            CONF_WOL_MAC: "",
+            CONF_WOL_BROADCAST: "255.255.255.255",
+            CONF_WOL_PORT: 9,
+            CONF_TURN_ON_ACTION: [],
+            CONF_INPUT_SOURCES: {},
+        },
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_WOL_MAC: "mac_required"}
+
+
+async def test_options_flow_configures_action_and_sources(hass) -> None:
+    """Custom actions and input sources are normalized."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    action = {
+        "action": "script.turn_on",
+        "target": {"entity_id": "script.lg_tv_ir"},
+    }
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_TURN_ON_METHOD: "action",
+            CONF_WOL_MAC: "",
+            CONF_WOL_BROADCAST: "255.255.255.255",
+            CONF_WOL_PORT: 9,
+            CONF_TURN_ON_ACTION: [action],
+            CONF_INPUT_SOURCES: {"hdmi1": ["input", "down", "ok"]},
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_TURN_ON_ACTION] == [action]
+    assert entry.options[CONF_INPUT_SOURCES] == {"hdmi1": ["INPUT", "DOWN", "OK"]}
 
 
 async def test_reconfigure_flow_updates_host(hass, mock_client) -> None:

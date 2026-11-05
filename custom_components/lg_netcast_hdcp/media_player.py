@@ -13,20 +13,37 @@ from homeassistant.components.media_player import (
     MediaType,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.trigger import PluggableAction
+from homeassistant.helpers.service import async_call_from_config
 
 from . import LgNetcastHdcpConfigEntry
-from .const import DOMAIN, MANUFACTURER, MODEL
+from .const import (
+    CONF_INPUT_SOURCES,
+    CONF_TURN_ON_ACTION,
+    CONF_TURN_ON_METHOD,
+    CONF_WOL_BROADCAST,
+    CONF_WOL_MAC,
+    CONF_WOL_PORT,
+    DEFAULT_TURN_ON_METHOD,
+    DEFAULT_WOL_BROADCAST,
+    DEFAULT_WOL_PORT,
+    DOMAIN,
+    MANUFACTURER,
+    MODEL,
+    TURN_ON_METHOD_ACTION,
+    TURN_ON_METHOD_BOTH,
+    TURN_ON_METHOD_NONE,
+    TURN_ON_METHOD_WOL,
+)
 from .hdcp import HdcpAuthError, HdcpError
-from .triggers.turn_on import async_get_turn_on_trigger
+from .wol import async_send_magic_packet
 
 _LOGGER = logging.getLogger(__name__)
 
-SUPPORTED_FEATURES = (
-    MediaPlayerEntityFeature.TURN_ON
-    | MediaPlayerEntityFeature.TURN_OFF
+BASE_FEATURES = (
+    MediaPlayerEntityFeature.TURN_OFF
     | MediaPlayerEntityFeature.VOLUME_STEP
     | MediaPlayerEntityFeature.VOLUME_MUTE
     | MediaPlayerEntityFeature.PLAY
@@ -59,6 +76,7 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         """Initialize the media player."""
         self._entry = entry
         self._client = entry.runtime_data.client
+        self._options = entry.options
         self._attr_unique_id = f"{entry.unique_id or entry.entry_id}_media_player"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, entry.unique_id or entry.entry_id)},
@@ -68,20 +86,11 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         )
         self._attr_state = MediaPlayerState.OFF
         self._attr_is_volume_muted = False
-        self._turn_on = PluggableAction(self.async_write_ha_state)
+        self._attr_source: str | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Register the turn-on trigger and probe the TV."""
+        """Probe the TV and handle a rejected pairing key."""
         await super().async_added_to_hass()
-
-        registry_entry = self.registry_entry
-        if registry_entry is not None and registry_entry.device_id is not None:
-            self.async_on_remove(
-                self._turn_on.async_register(
-                    self.hass,
-                    async_get_turn_on_trigger(registry_entry.device_id),
-                )
-            )
 
         try:
             await self._client.async_authenticate()
@@ -97,11 +106,64 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
         """Return supported media player features."""
-        return SUPPORTED_FEATURES
+        features = BASE_FEATURES
+        if self._turn_on_method != TURN_ON_METHOD_NONE:
+            features |= MediaPlayerEntityFeature.TURN_ON
+        if self._input_sources:
+            features |= MediaPlayerEntityFeature.SELECT_SOURCE
+        return features
+
+    @property
+    def source_list(self) -> list[str] | None:
+        """Return configured input sources."""
+        return list(self._input_sources) if self._input_sources else None
+
+    @property
+    def source(self) -> str | None:
+        """Return the last selected source."""
+        return self._attr_source
+
+    @property
+    def _turn_on_method(self) -> str:
+        """Return the configured power-on method."""
+        return self._options.get(CONF_TURN_ON_METHOD, DEFAULT_TURN_ON_METHOD)
+
+    @property
+    def _input_sources(self) -> dict[str, list[str]]:
+        """Return configured input sources."""
+        sources = self._options.get(CONF_INPUT_SOURCES, {})
+        return sources if isinstance(sources, dict) else {}
 
     async def async_turn_on(self) -> None:
-        """Run the configured external power-on action."""
-        await self._turn_on.async_run(self.hass, self._context)
+        """Power on the TV using the configured method."""
+        method = self._turn_on_method
+        if method == TURN_ON_METHOD_NONE:
+            raise HomeAssistantError("No power-on method is configured")
+
+        if method in (TURN_ON_METHOD_WOL, TURN_ON_METHOD_BOTH):
+            await async_send_magic_packet(
+                self.hass,
+                self._options.get(CONF_WOL_MAC, ""),
+                self._options.get(CONF_WOL_BROADCAST, DEFAULT_WOL_BROADCAST),
+                self._options.get(CONF_WOL_PORT, DEFAULT_WOL_PORT),
+            )
+
+        if method in (TURN_ON_METHOD_ACTION, TURN_ON_METHOD_BOTH):
+            await self._async_run_turn_on_action()
+
+    async def _async_run_turn_on_action(self) -> None:
+        """Run the configured custom turn-on action."""
+        actions = self._options.get(CONF_TURN_ON_ACTION, [])
+        if not actions:
+            raise HomeAssistantError("No turn-on action is configured")
+
+        for action in actions:
+            await async_call_from_config(
+                self.hass,
+                action,
+                blocking=True,
+                context=self._context,
+            )
 
     async def async_turn_off(self) -> None:
         """Turn the TV off."""
@@ -137,6 +199,16 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
     async def async_media_stop(self) -> None:
         """Send stop."""
         await self._async_send("STOP")
+
+    async def async_select_source(self, source: str) -> None:
+        """Run the configured key sequence for an input source."""
+        sequence = self._input_sources.get(source)
+        if not sequence:
+            raise HomeAssistantError(f"Unknown input source: {source}")
+
+        await self._async_send_sequence(sequence)
+        self._attr_source = source
+        self.async_write_ha_state()
 
     async def async_play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
