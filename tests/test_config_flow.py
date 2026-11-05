@@ -146,6 +146,39 @@ async def test_user_flow_reports_connection_error(hass, mock_client) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+async def test_reconfigure_flow_updates_host(hass, mock_client) -> None:
+    """The reconfigure flow updates the host and unique ID."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.flow.async_init(
+        DOMAIN,
+        context={
+            "source": config_entries.SOURCE_RECONFIGURE,
+            "entry_id": entry.entry_id,
+        },
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"],
+        {"host": "192.0.2.11"},
+    )
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["host"] == "192.0.2.11"
+    assert entry.unique_id == "192.0.2.11"
+
+    await hass.async_block_till_done()
+    await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
+
 async def test_reauth_flow_updates_key(hass, mock_client) -> None:
     """The reauth flow replaces the stored pairing key."""
     entry = MockConfigEntry(
