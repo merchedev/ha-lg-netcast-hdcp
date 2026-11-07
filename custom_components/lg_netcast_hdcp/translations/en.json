@@ -42,6 +42,8 @@
       "invalid_auth": "The TV rejected the pairing key.",
       "invalid_host": "Enter a valid IP address or hostname.",
       "invalid_key": "The pairing key must be six letters or digits.",
+      "pairing_rejected": "The TV rejected the pairing request. Turn the TV on and try again.",
+      "protocol_error": "The TV returned an unexpected response. Check the TV firmware and try again.",
       "unknown": "Unexpected error while talking to the TV."
     },
     "abort": {
@@ -55,24 +57,49 @@
     "step": {
       "init": {
         "title": "LG NetCast HDCP options",
-        "description": "Configure how Home Assistant powers on the TV, maps input sources, and tracks state.",
+        "description": "Choose what you want to configure.",
+        "menu_options": {
+          "power_on": "Power-on behavior",
+          "sources": "Input sources",
+          "tracking": "State tracking"
+        }
+      },
+      "power_on": {
+        "title": "Power-on behavior",
+        "description": "Choose how Home Assistant should power on the TV.",
         "data": {
           "turn_on_method": "Power-on method",
           "wol_mac": "MAC address",
           "wol_broadcast": "Broadcast address",
           "wol_port": "Broadcast port",
-          "turn_on_action": "Custom turn-on action",
-          "input_sources": "Input sources",
-          "power_off_source": "Source before power off",
-          "ir_state_tracking": "IR receiver state tracking"
+          "turn_on_action": "Custom turn-on action"
         },
         "data_description": {
           "turn_on_method": "Choose how Home Assistant should power on the TV. Leave it as none to hide the turn-on button. Wake-on-LAN is not supported by every 2011 model.",
           "wol_mac": "Ethernet MAC address of the TV.",
           "wol_broadcast": "IPv4 broadcast address for the magic packet.",
-          "turn_on_action": "Action to run for IR, CEC, or another power-on method. An IR integration must already be configured.",
+          "turn_on_action": "Action to run for IR, CEC, or another power-on method. An IR integration must already be configured."
+        }
+      },
+      "sources": {
+        "title": "Input sources",
+        "description": "Map custom source names to key sequences and choose the input to select before standby.",
+        "data": {
+          "input_sources": "Input sources",
+          "power_off_source": "Source before power off"
+        },
+        "data_description": {
           "input_sources": "Optional mapping of custom source names to key sequences. HDMI1-HDMI4 and AV1 are available automatically. Use this for other inputs, custom names, or IR tracking sequences.",
-          "power_off_source": "Optional direct input or custom source to select before entering standby. Choose none to disable. Set this to HDMI1 when an HDMI-CEC device can only wake the TV if its input was active.",
+          "power_off_source": "Optional direct input or custom source to select before entering standby. Choose none to disable. Set this to HDMI1 when an HDMI-CEC device can only wake the TV if its input was active."
+        }
+      },
+      "tracking": {
+        "title": "State tracking",
+        "description": "Configure the optional external IR receiver integration.",
+        "data": {
+          "ir_state_tracking": "IR receiver state tracking"
+        },
+        "data_description": {
           "ir_state_tracking": "Enable after configuring an external IR receiver to call the lg_netcast_hdcp.process_ir_key action. This improves input and mute tracking and removes the state limitation warning."
         }
       }
@@ -84,6 +111,32 @@
       "invalid_sources": "Input sources must be a mapping of names to non-empty key sequences.",
       "mac_required": "Enter the TV's MAC address to use Wake-on-LAN.",
       "unknown_source": "Select a direct input or a source that exists in the input sources mapping."
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "Could not send the command to the TV. Check that it is on and connected."
+    },
+    "session_rejected": {
+      "message": "The TV rejected the session. Reauthentication is required."
+    },
+    "unknown_source": {
+      "message": "Unknown input source: {source}"
+    },
+    "unsupported_ir_key": {
+      "message": "Unsupported IR key: {key}"
+    }
+  },
+  "services": {
+    "process_ir_key": {
+      "name": "Process IR key",
+      "description": "Update the television state from a key received by an external IR receiver. The key is not sent to the television.",
+      "fields": {
+        "key": {
+          "name": "Key",
+          "description": "Key name such as POWER, INPUT, OK, NUMBER_1, HDMI1, or UP, or a two-digit decimal code from 00 to 99."
+        }
+      }
     }
   },
   "issues": {

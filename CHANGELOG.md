@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.7.0
+
+- Split the options flow into **Power-on behavior**, **Input sources**, and
+  **State tracking** sections.
+- Added Spanish translations for setup, options, services, repairs, and errors.
+- Failed commands now report a visible error and start reauthentication when
+  the TV rejects the session.
+- The setup flow now distinguishes pairing rejection, protocol errors, and
+  connection failures.
+- Added tests for the sectioned options flow, Spanish translation consistency,
+  and command error handling.
+
 ## 0.6.2
 
 - Declared the integration as config-entry only so hassfest no longer reports a

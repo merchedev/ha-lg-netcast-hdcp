@@ -390,10 +390,13 @@ async def test_failed_command_marks_state_unknown(
     entity_id = hass.states.async_entity_ids("media_player")[0]
     assert hass.states.get(entity_id).state == STATE_ON
 
-    with patch.object(
-        LgHdcpClient,
-        "async_send_key",
-        new=AsyncMock(side_effect=HdcpConnectionError("TV is unreachable")),
+    with (
+        patch.object(
+            LgHdcpClient,
+            "async_send_key",
+            new=AsyncMock(side_effect=HdcpConnectionError("TV is unreachable")),
+        ),
+        pytest.raises(HomeAssistantError),
     ):
         await hass.services.async_call(
             "media_player",
@@ -412,10 +415,13 @@ async def test_failed_turn_off_does_not_report_off(
     entity_id = hass.states.async_entity_ids("media_player")[0]
     assert hass.states.get(entity_id).state == STATE_ON
 
-    with patch.object(
-        LgHdcpClient,
-        "async_send_key",
-        new=AsyncMock(side_effect=HdcpConnectionError("TV is unreachable")),
+    with (
+        patch.object(
+            LgHdcpClient,
+            "async_send_key",
+            new=AsyncMock(side_effect=HdcpConnectionError("TV is unreachable")),
+        ),
+        pytest.raises(HomeAssistantError),
     ):
         await hass.services.async_call(
             "media_player",
@@ -424,6 +430,33 @@ async def test_failed_turn_off_does_not_report_off(
             blocking=True,
         )
 
+    assert hass.states.get(entity_id).state == STATE_UNKNOWN
+
+
+async def test_failed_command_starts_reauth(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """A rejected session starts reauthentication and reports an error."""
+    entity_id = hass.states.async_entity_ids("media_player")[0]
+    assert hass.states.get(entity_id).state == STATE_ON
+
+    with (
+        patch.object(setup_integration, "async_start_reauth") as start_reauth,
+        patch.object(
+            LgHdcpClient,
+            "async_send_key",
+            new=AsyncMock(side_effect=HdcpAuthError("bad key")),
+        ),
+        pytest.raises(HomeAssistantError),
+    ):
+        await hass.services.async_call(
+            "media_player",
+            "volume_up",
+            {"entity_id": entity_id},
+            blocking=True,
+        )
+
+    assert start_reauth.called
     assert hass.states.get(entity_id).state == STATE_UNKNOWN
 
 

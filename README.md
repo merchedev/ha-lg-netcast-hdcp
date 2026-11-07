@@ -65,7 +65,8 @@ options.
 4. Search for **LG NetCast HDCP**.
 5. Enter the TV IP address. Use a static IP or DHCP reservation.
 6. Enter the six-character pairing key shown on the TV.
-7. Open the integration's **Configure** dialog and choose your power-on method.
+7. Open the integration's **Configure** dialog, choose **Power-on behavior**, and
+   select your power-on method.
 
 Expected result: a media player, a remote entity, and remote-key buttons are
 created. The media player reads power, channel, channel name, and UI mode while
@@ -99,7 +100,9 @@ You do **not** need an IR receiver for power, channel, or UI mode. It is optiona
 - Optional Wake-on-LAN or custom-action power-on.
 - Optional source-before-power-off for HDMI-CEC wake compatibility.
 - Optional external IR receiver state tracking.
-- Automatic session reauthentication after the TV wakes up.
+- Sectioned options for power-on behavior, input sources, and state tracking.
+- English and Spanish user-interface translations.
+- Visible command errors and automatic reauthentication after the TV wakes up.
 - Redacted diagnostics.
 - A standalone probe tool for troubleshooting.
 

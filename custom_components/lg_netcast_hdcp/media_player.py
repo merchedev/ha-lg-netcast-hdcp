@@ -240,8 +240,8 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         if source:
             await self._async_select_power_off_source(source)
 
-        if await self._async_send("POWER"):
-            self._tracker.set_power(False)
+        await self._async_send("POWER")
+        self._tracker.set_power(False)
 
     async def _async_select_power_off_source(self, source: str) -> None:
         """Select the configured source before entering standby."""
@@ -271,9 +271,19 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
             return
 
         if direct_key is not None:
-            if await self._async_send(direct_key):
-                await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
-                self._tracker.set_source(source)
+            try:
+                await self._async_send(direct_key)
+            except HomeAssistantError as err:
+                if err.translation_key == "session_rejected":
+                    raise
+                _LOGGER.debug(
+                    "Could not select power-off source %s: %s",
+                    source,
+                    err,
+                )
+                return
+            await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
+            self._tracker.set_source(source)
             return
 
         if not sequence:
@@ -283,9 +293,19 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
             )
             return
 
-        if await self._async_send_sequence(sequence):
-            await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
-            self._tracker.set_source(source)
+        try:
+            await self._async_send_sequence(sequence)
+        except HomeAssistantError as err:
+            if err.translation_key == "session_rejected":
+                raise
+            _LOGGER.debug(
+                "Could not select power-off source %s: %s",
+                source,
+                err,
+            )
+            return
+        await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
+        self._tracker.set_source(source)
 
     async def async_volume_up(self) -> None:
         """Increase the volume."""
@@ -323,20 +343,25 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
             sequence = None
             direct_key = self._client.profile.direct_input_key(source)
         else:
-            raise HomeAssistantError(f"Unknown input source: {source}")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="unknown_source",
+                translation_placeholders={"source": source},
+            )
 
         if direct_key is not None:
-            if not await self._async_send(direct_key):
-                raise HomeAssistantError(f"Could not select source: {source}")
+            await self._async_send(direct_key)
             self._tracker.set_source(source)
             return
 
         if not sequence:
-            raise HomeAssistantError(f"Unknown input source: {source}")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="unknown_source",
+                translation_placeholders={"source": source},
+            )
 
-        if not await self._async_send_sequence(sequence):
-            raise HomeAssistantError(f"Could not select source: {source}")
-
+        await self._async_send_sequence(sequence)
         self._tracker.set_source(source)
 
     async def async_play_media(
@@ -357,7 +382,11 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
     async def async_process_ir_key(self, key: str) -> None:
         """Update the assumed state from an external IR receiver key."""
         if not self._tracker.process_ir_key(key):
-            raise HomeAssistantError(f"Unsupported IR key: {key}")
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="unsupported_ir_key",
+                translation_placeholders={"key": key},
+            )
 
     def _handle_tracker_update(self) -> None:
         """Copy tracker state to Home Assistant attributes."""
@@ -382,33 +411,54 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         self._attr_is_volume_muted = self._tracker.muted
         self.async_write_ha_state()
 
-    async def _async_send(self, key: str) -> bool:
+    async def _async_send(self, key: str) -> None:
         """Send a single key and update the assumed state."""
-        success = False
         try:
             await self._client.async_send_key(key)
-        except HdcpAuthError:
+        except HdcpAuthError as err:
+            _LOGGER.warning(
+                "The TV rejected the session while sending %s: %s",
+                key,
+                err,
+            )
             self._tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
-        except HdcpError:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="session_rejected",
+            ) from err
+        except HdcpError as err:
+            _LOGGER.warning("Could not send %s to the TV: %s", key, err)
             self._tracker.set_power(None)
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+            ) from err
         else:
             self._tracker.process_sent_key(key)
-            success = True
-        return success
 
-    async def _async_send_sequence(self, keys: list[str]) -> bool:
+    async def _async_send_sequence(self, keys: list[str]) -> None:
         """Send a key sequence and update the assumed state."""
-        success = False
         try:
             await self._client.async_send_sequence(keys)
-        except HdcpAuthError:
+        except HdcpAuthError as err:
+            _LOGGER.warning(
+                "The TV rejected the session while sending a key sequence: %s",
+                err,
+            )
             self._tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
-        except HdcpError:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="session_rejected",
+            ) from err
+        except HdcpError as err:
+            _LOGGER.warning("Could not send a key sequence to the TV: %s", err)
             self._tracker.set_power(None)
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+            ) from err
         else:
             for key in keys:
                 self._tracker.process_sent_key(key)
-            success = True
-        return success

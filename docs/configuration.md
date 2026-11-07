@@ -25,18 +25,21 @@ the new key shown on screen.
 
 ## Options reference
 
-Open **Settings → Devices & services → LG NetCast HDCP → Configure**.
+Open **Settings → Devices & services → LG NetCast HDCP → Configure**. The
+dialog is split into **Power-on behavior**, **Input sources**, and **State
+tracking**. Each section saves independently, so you can change only what you
+need.
 
-| Option | Values | Default | Purpose |
-|---|---|---|---|
-| Power-on method | None, Wake-on-LAN, Custom action, Both | None | How `turn_on` wakes the TV |
-| MAC address | MAC string | Empty | Wake-on-LAN target |
-| Broadcast address | IPv4 address | `255.255.255.255` | Wake-on-LAN broadcast |
-| Broadcast port | 1–65535 | `9` | Wake-on-LAN port |
-| Custom turn-on action | Home Assistant action | Empty | IR, CEC, RS-232C, or script |
-| Input sources | Mapping of names to key sequences | Empty | Custom sources, non-direct inputs, and IR sequences |
-| Source before power off | Direct input or custom source | None | Leave the TV on a CEC input before standby |
-| IR receiver state tracking | Boolean | Off | Acknowledge external IR state updates and hide the warning |
+| Section | Option | Values | Default | Purpose |
+|---|---|---|---|---|
+| Power-on behavior | Power-on method | None, Wake-on-LAN, Custom action, Both | None | How `turn_on` wakes the TV |
+| Power-on behavior | MAC address | MAC string | Empty | Wake-on-LAN target |
+| Power-on behavior | Broadcast address | IPv4 address | `255.255.255.255` | Wake-on-LAN broadcast |
+| Power-on behavior | Broadcast port | 1–65535 | `9` | Wake-on-LAN port |
+| Power-on behavior | Custom turn-on action | Home Assistant action | Empty | IR, CEC, RS-232C, or script |
+| Input sources | Input sources | Mapping of names to key sequences | Empty | Custom sources, non-direct inputs, and IR sequences |
+| Input sources | Source before power off | Direct input or custom source | None | Leave the TV on a CEC input before standby |
+| State tracking | IR receiver state tracking | Boolean | Off | Acknowledge external IR state updates and hide the warning |
 
 ## Power-on methods
 
@@ -197,6 +200,16 @@ code capture, and troubleshooting.
 After configuring the receiver, enable **IR receiver state tracking** to
 suppress the state limitation repair issue. You can also use the **Fix** action
 on that issue. The service works even when this option is off.
+
+## Upgrading from 0.6.2
+
+- The **Configure** dialog now opens a menu with **Power-on behavior**,
+  **Input sources**, and **State tracking**. Each section saves independently.
+- Spanish translations are included for setup, options, the IR service, the
+  repair flow, and command errors.
+- A failed command now reports an error and starts reauthentication when the TV
+  rejects the session.
+- Restart Home Assistant after updating through HACS.
 
 ## Upgrading from 0.5.0
 

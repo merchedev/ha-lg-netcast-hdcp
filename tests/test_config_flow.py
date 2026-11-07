@@ -20,6 +20,7 @@ from custom_components.lg_netcast_hdcp.const import (
 from custom_components.lg_netcast_hdcp.hdcp import (
     HdcpAuthError,
     HdcpConnectionError,
+    HdcpProtocolError,
     LgHdcpClient,
 )
 from homeassistant import config_entries
@@ -159,6 +160,90 @@ async def test_user_flow_reports_connection_error(hass, mock_client) -> None:
     assert result["errors"] == {"base": "cannot_connect"}
 
 
+async def test_user_flow_reports_pairing_protocol_error(hass, mock_client) -> None:
+    """An unexpected pairing response is reported separately."""
+    with patch.object(
+        LgHdcpClient,
+        "async_request_pairing_key",
+        new=AsyncMock(side_effect=HdcpProtocolError("bad response")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"host": HOST},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "protocol_error"}
+
+
+async def test_user_flow_reports_rejected_pairing_request(hass, mock_client) -> None:
+    """A rejected pairing request has its own error."""
+    with patch.object(
+        LgHdcpClient,
+        "async_request_pairing_key",
+        new=AsyncMock(side_effect=HdcpAuthError("rejected")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"host": HOST},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "pairing_rejected"}
+
+
+async def test_user_flow_reports_auth_protocol_error(hass, mock_client) -> None:
+    """An unexpected auth response is reported separately."""
+    with patch.object(
+        LgHdcpClient,
+        "async_authenticate",
+        new=AsyncMock(side_effect=HdcpProtocolError("bad response")),
+    ):
+        result = await hass.config_entries.flow.async_init(
+            DOMAIN,
+            context={"source": config_entries.SOURCE_USER},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {"host": HOST},
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {CONF_PAIRING_KEY: KEY},
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "protocol_error"}
+
+
+async def _start_options_flow(hass, entry):
+    """Open the options flow and assert the section menu."""
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "init"
+    assert result["menu_options"] == ["power_on", "sources", "tracking"]
+    return result
+
+
+async def _select_options_step(hass, flow_id, step):
+    """Select one section from the options menu."""
+    result = await hass.config_entries.options.async_configure(
+        flow_id,
+        {"next_step_id": step},
+    )
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == step
+    return result
+
+
 async def test_options_flow_configures_wol(hass) -> None:
     """Wake-on-LAN options are persisted."""
     entry = MockConfigEntry(
@@ -168,10 +253,8 @@ async def test_options_flow_configures_wol(hass) -> None:
     )
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
-    assert result["type"] is FlowResultType.FORM
-    assert result["step_id"] == "init"
-
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "power_on")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {
@@ -180,7 +263,6 @@ async def test_options_flow_configures_wol(hass) -> None:
             CONF_WOL_BROADCAST: "192.168.1.255",
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [],
-            CONF_INPUT_SOURCES: {},
         },
     )
 
@@ -199,7 +281,8 @@ async def test_options_flow_requires_mac_for_wol(hass) -> None:
     )
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "power_on")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {
@@ -208,7 +291,6 @@ async def test_options_flow_requires_mac_for_wol(hass) -> None:
             CONF_WOL_BROADCAST: "255.255.255.255",
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [],
-            CONF_INPUT_SOURCES: {},
         },
     )
 
@@ -216,8 +298,8 @@ async def test_options_flow_requires_mac_for_wol(hass) -> None:
     assert result["errors"] == {CONF_WOL_MAC: "mac_required"}
 
 
-async def test_options_flow_configures_action_and_sources(hass) -> None:
-    """Custom actions and input sources are normalized."""
+async def test_options_flow_configures_action(hass) -> None:
+    """Custom power-on actions are persisted."""
     entry = MockConfigEntry(
         domain=DOMAIN,
         data={"host": HOST, CONF_PAIRING_KEY: KEY},
@@ -229,7 +311,8 @@ async def test_options_flow_configures_action_and_sources(hass) -> None:
         "action": "script.turn_on",
         "target": {"entity_id": "script.lg_tv_ir"},
     }
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "power_on")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {
@@ -238,16 +321,84 @@ async def test_options_flow_configures_action_and_sources(hass) -> None:
             CONF_WOL_BROADCAST: "255.255.255.255",
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [action],
-            CONF_INPUT_SOURCES: {"hdmi1": ["input", "left", "ok"]},
-            CONF_POWER_OFF_SOURCE: "hdmi1",
-            CONF_IR_STATE_TRACKING: True,
         },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_TURN_ON_ACTION] == [action]
+
+
+async def test_options_flow_configures_sources(hass) -> None:
+    """Input sources and the power-off source are normalized."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "sources")
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_INPUT_SOURCES: {"hdmi1": ["input", "left", "ok"]},
+            CONF_POWER_OFF_SOURCE: "hdmi1",
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_INPUT_SOURCES] == {"hdmi1": ["INPUT", "LEFT", "OK"]}
     assert entry.options[CONF_POWER_OFF_SOURCE] == "hdmi1"
+
+
+async def test_options_flow_configures_tracking(hass) -> None:
+    """IR receiver state tracking is persisted."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "tracking")
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_IR_STATE_TRACKING: True},
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_IR_STATE_TRACKING] is True
+
+
+async def test_options_flow_preserves_unrelated_options(hass) -> None:
+    """Saving one section keeps the options from the other sections."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+        options={
+            CONF_TURN_ON_METHOD: "wol",
+            CONF_WOL_MAC: "AA:BB:CC:DD:EE:FF",
+            CONF_INPUT_SOURCES: {"Satellite": ["INPUT", "OK"]},
+            CONF_POWER_OFF_SOURCE: "HDMI1",
+        },
+    )
+    entry.add_to_hass(hass)
+
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "tracking")
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {CONF_IR_STATE_TRACKING: True},
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_TURN_ON_METHOD] == "wol"
+    assert entry.options[CONF_WOL_MAC] == "AA:BB:CC:DD:EE:FF"
+    assert entry.options[CONF_INPUT_SOURCES] == {"Satellite": ["INPUT", "OK"]}
+    assert entry.options[CONF_POWER_OFF_SOURCE] == "HDMI1"
     assert entry.options[CONF_IR_STATE_TRACKING] is True
 
 
@@ -260,18 +411,13 @@ async def test_options_flow_rejects_unknown_power_off_source(hass) -> None:
     )
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "sources")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {
-            CONF_TURN_ON_METHOD: "none",
-            CONF_WOL_MAC: "",
-            CONF_WOL_BROADCAST: "255.255.255.255",
-            CONF_WOL_PORT: 9,
-            CONF_TURN_ON_ACTION: [],
             CONF_INPUT_SOURCES: {"hdmi1": ["INPUT", "LEFT", "OK"]},
             CONF_POWER_OFF_SOURCE: "hdmi9",
-            CONF_IR_STATE_TRACKING: False,
         },
     )
 
@@ -288,18 +434,13 @@ async def test_options_flow_allows_direct_power_off_source(hass) -> None:
     )
     entry.add_to_hass(hass)
 
-    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await _start_options_flow(hass, entry)
+    result = await _select_options_step(hass, result["flow_id"], "sources")
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
         {
-            CONF_TURN_ON_METHOD: "none",
-            CONF_WOL_MAC: "",
-            CONF_WOL_BROADCAST: "255.255.255.255",
-            CONF_WOL_PORT: 9,
-            CONF_TURN_ON_ACTION: [],
             CONF_INPUT_SOURCES: {},
             CONF_POWER_OFF_SOURCE: "HDMI1",
-            CONF_IR_STATE_TRACKING: False,
         },
     )
 

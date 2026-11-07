@@ -60,9 +60,10 @@ firmware 0001.0009):
 
 - `hdcp.py`: protocol client. Owns HTTP, XML parsing, pairing, session
   lifecycle, one automatic reauthentication retry, and key-code validation.
-- `config_flow.py`: manual host setup, pairing, reauthentication,
-  reconfiguration, and options for power-on behavior, input sequences, source
-  before power off, and IR state tracking.
+- `config_flow.py`: manual host setup, pairing, reauthentication, and
+  reconfiguration.
+- `options_flow.py`: options for power-on behavior, input sequences, source
+  before power off, and IR state tracking, split into sections.
 - `coordinator.py`: polls the HDCP data endpoint for power, channel, channel
   name, and UI mode.
 - `state.py`: shared best-known state tracker for commands, state polls, and

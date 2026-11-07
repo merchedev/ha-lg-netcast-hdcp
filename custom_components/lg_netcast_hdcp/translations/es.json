@@ -1,0 +1,158 @@
+{
+  "config": {
+    "flow_title": "TV LG NetCast HDCP",
+    "step": {
+      "user": {
+        "title": "TV LG NetCast HDCP",
+        "description": "Introduce la dirección IP del televisor. El televisor debe estar encendido y conectado a la misma red que Home Assistant.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Usa una IP estática o una reserva DHCP. Si la IP del televisor cambia, la integración perderá la conexión."
+        }
+      },
+      "pair": {
+        "title": "Emparejar con el televisor",
+        "description": "El televisor en {host} debería mostrar ahora una clave de emparejamiento de {length} caracteres. Introdúcela a continuación.",
+        "data": {
+          "pairing_key": "Clave de emparejamiento"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Volver a autenticar con el televisor",
+        "description": "El televisor en {host} ha rechazado la clave de emparejamiento guardada. Enciende el televisor e introduce la clave de {length} caracteres que aparece en pantalla.",
+        "data": {
+          "pairing_key": "Clave de emparejamiento"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurar el televisor",
+        "description": "Actualiza la dirección IP del televisor.",
+        "data": {
+          "host": "Host"
+        },
+        "data_description": {
+          "host": "Usa una IP estática o una reserva DHCP. Si la IP del televisor cambia, la integración perderá la conexión."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "No se pudo conectar con el televisor. Comprueba la dirección IP, la red y que el televisor esté encendido.",
+      "invalid_auth": "El televisor rechazó la clave de emparejamiento.",
+      "invalid_host": "Introduce una dirección IP o un nombre de host válidos.",
+      "invalid_key": "La clave de emparejamiento debe tener seis letras o dígitos.",
+      "pairing_rejected": "El televisor rechazó la solicitud de emparejamiento. Enciende el televisor e inténtalo de nuevo.",
+      "protocol_error": "El televisor devolvió una respuesta inesperada. Comprueba el firmware del televisor e inténtalo de nuevo.",
+      "unknown": "Error inesperado al comunicarse con el televisor."
+    },
+    "abort": {
+      "already_configured": "Este televisor ya está configurado.",
+      "entry_not_found": "La entrada de configuración ya no existe.",
+      "reauth_successful": "La reautenticación se completó correctamente.",
+      "reconfigure_successful": "La reconfiguración se completó correctamente."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de LG NetCast HDCP",
+        "description": "Elige qué quieres configurar.",
+        "menu_options": {
+          "power_on": "Encendido",
+          "sources": "Fuentes de entrada",
+          "tracking": "Seguimiento del estado"
+        }
+      },
+      "power_on": {
+        "title": "Encendido",
+        "description": "Elige cómo debe encender Home Assistant el televisor.",
+        "data": {
+          "turn_on_method": "Método de encendido",
+          "wol_mac": "Dirección MAC",
+          "wol_broadcast": "Dirección de difusión",
+          "wol_port": "Puerto de difusión",
+          "turn_on_action": "Acción de encendido personalizada"
+        },
+        "data_description": {
+          "turn_on_method": "Elige cómo debe encender Home Assistant el televisor. Déjalo en ninguno para ocultar el botón de encendido. Wake-on-LAN no es compatible con todos los modelos de 2011.",
+          "wol_mac": "Dirección MAC Ethernet del televisor.",
+          "wol_broadcast": "Dirección IPv4 de difusión para el paquete mágico.",
+          "turn_on_action": "Acción que se ejecutará para IR, CEC u otro método de encendido. La integración de IR debe estar configurada previamente."
+        }
+      },
+      "sources": {
+        "title": "Fuentes de entrada",
+        "description": "Asigna nombres de fuente personalizados a secuencias de teclas y elige la entrada que se seleccionará antes de apagar.",
+        "data": {
+          "input_sources": "Fuentes de entrada",
+          "power_off_source": "Fuente antes de apagar"
+        },
+        "data_description": {
+          "input_sources": "Asignación opcional de nombres de fuente personalizados a secuencias de teclas. HDMI1-HDMI4 y AV1 están disponibles automáticamente. Úsalo para otras entradas, nombres personalizados o secuencias de seguimiento por IR.",
+          "power_off_source": "Entrada directa o fuente personalizada opcional que se seleccionará antes de entrar en espera. Elige ninguna para desactivarlo. Configúralo en HDMI1 cuando un dispositivo HDMI-CEC solo pueda encender el televisor si su entrada estaba activa."
+        }
+      },
+      "tracking": {
+        "title": "Seguimiento del estado",
+        "description": "Configura la integración opcional de un receptor IR externo.",
+        "data": {
+          "ir_state_tracking": "Seguimiento del estado por receptor IR"
+        },
+        "data_description": {
+          "ir_state_tracking": "Actívalo después de configurar un receptor IR externo que llame a la acción lg_netcast_hdcp.process_ir_key. Mejora el seguimiento de entradas y silencio, y elimina el aviso de limitación de estado."
+        }
+      }
+    },
+    "error": {
+      "action_required": "Selecciona una acción de encendido o elige otro método de encendido.",
+      "invalid_action": "La acción de encendido no es válida.",
+      "invalid_mac": "Introduce una dirección MAC válida.",
+      "invalid_sources": "Las fuentes de entrada deben ser una asignación de nombres a secuencias de teclas no vacías.",
+      "mac_required": "Introduce la dirección MAC del televisor para usar Wake-on-LAN.",
+      "unknown_source": "Selecciona una entrada directa o una fuente que exista en la asignación de fuentes de entrada."
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "No se pudo enviar el comando al televisor. Comprueba que esté encendido y conectado."
+    },
+    "session_rejected": {
+      "message": "El televisor rechazó la sesión. Es necesario volver a autenticarse."
+    },
+    "unknown_source": {
+      "message": "Fuente de entrada desconocida: {source}"
+    },
+    "unsupported_ir_key": {
+      "message": "Tecla IR no compatible: {key}"
+    }
+  },
+  "services": {
+    "process_ir_key": {
+      "name": "Procesar tecla IR",
+      "description": "Actualiza el estado del televisor a partir de una tecla recibida por un receptor IR externo. La tecla no se envía al televisor.",
+      "fields": {
+        "key": {
+          "name": "Tecla",
+          "description": "Nombre de tecla como POWER, INPUT, OK, NUMBER_1, HDMI1 o UP, o un código decimal de dos dígitos entre 00 y 99."
+        }
+      }
+    }
+  },
+  "issues": {
+    "state_not_tracked": {
+      "title": "El estado del televisor no se sigue por completo",
+      "fix_flow": {
+        "abort": {
+          "entry_not_found": "La entrada de configuración del televisor ya no existe."
+        },
+        "step": {
+          "confirm": {
+            "title": "Activar el seguimiento del estado por receptor IR",
+            "description": "La integración no está siguiendo por completo {name}. Puede consultar el encendido, el canal actual y el modo de interfaz del televisor, pero no puede leer la entrada HDMI activa ni el volumen. Sin un receptor IR externo, los cambios de entrada realizados con el mando del televisor no se siguen. Si usas HDMI-CEC (por ejemplo, un Apple TV), apagar el televisor en otra entrada con el mando puede impedir que el dispositivo CEC lo vuelva a encender.\n\nConfigura **Fuente antes de apagar** en la entrada CEC, o configura un receptor IR y activa **Seguimiento del estado por receptor IR**.\n\nContinúa solo si has configurado un receptor IR externo que llame a **lg_netcast_hdcp.process_ir_key**. Si no tienes un receptor IR, cancela y descarta el aviso."
+          }
+        }
+      }
+    }
+  }
+}
