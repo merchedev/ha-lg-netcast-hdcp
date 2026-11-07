@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0
 
 - Poll power, channel, channel name, and UI mode from the HDCP data endpoint.
 - Added confirmed direct-input keys for HDMI1-HDMI4 and Up/Down keys.
