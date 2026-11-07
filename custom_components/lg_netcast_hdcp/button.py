@@ -33,6 +33,30 @@ BUTTONS: tuple[LgNetcastButtonDescription, ...] = (
         key="input", name="Input", command="INPUT", icon="mdi:import"
     ),
     LgNetcastButtonDescription(
+        key="hdmi1",
+        name="HDMI1",
+        command="HDMI1",
+        icon="mdi:video-input-hdmi",
+    ),
+    LgNetcastButtonDescription(
+        key="hdmi2",
+        name="HDMI2",
+        command="HDMI2",
+        icon="mdi:video-input-hdmi",
+    ),
+    LgNetcastButtonDescription(
+        key="hdmi3",
+        name="HDMI3",
+        command="HDMI3",
+        icon="mdi:video-input-hdmi",
+    ),
+    LgNetcastButtonDescription(
+        key="hdmi4",
+        name="HDMI4",
+        command="HDMI4",
+        icon="mdi:video-input-hdmi",
+    ),
+    LgNetcastButtonDescription(
         key="left", name="Left", command="LEFT", icon="mdi:arrow-left"
     ),
     LgNetcastButtonDescription(

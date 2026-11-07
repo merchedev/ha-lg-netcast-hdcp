@@ -1,0 +1,129 @@
+name: Bug report
+description: Report a problem with the LG NetCast HDCP integration
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please read the troubleshooting guide first.
+
+        **Do not paste a pairing key, session ID, full `.storage` file, or an
+        unredacted Home Assistant backup.** Review diagnostics and logs before
+        posting them.
+
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      description: The version shown in HACS or the integration page.
+      placeholder: "0.4.1"
+    validations:
+      required: true
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2026.11.0"
+    validations:
+      required: true
+
+  - type: input
+    id: tv_model
+    attributes:
+      label: TV model
+      description: "Example: 42LW650S-ZC."
+      placeholder: "42LW650S-ZC"
+    validations:
+      required: true
+
+  - type: input
+    id: firmware
+    attributes:
+      label: TV firmware
+      description: If known, from the TV settings.
+      placeholder: "0001.0009"
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Installation method
+      options:
+        - HACS
+        - Manual
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: power_on_method
+    attributes:
+      label: Power-on method
+      options:
+        - None
+        - Wake-on-LAN
+        - Custom action
+        - Both
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ir_tracking
+    attributes:
+      label: IR receiver state tracking
+      options:
+        - "Off"
+        - "On"
+        - Not configured
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Press ...
+        3. See ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug logs
+      description: >-
+        Enable custom_components.lg_netcast_hdcp debug logging. Remove pairing
+        keys and session IDs before pasting.
+      render: text
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: >-
+        Attach the diagnostics file after reviewing it. Pairing keys are
+        redacted, but review it before posting.
+      render: text
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and the troubleshooting guide.
+          required: true
+        - label: I removed pairing keys and session IDs from logs.
+          required: true
+        - label: I restarted Home Assistant after updating the integration.
+          required: true

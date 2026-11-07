@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.4.1
+
+- Added HDMI1–HDMI4 buttons.
+- Show the known source in `media_title` when no channel is available.
+- Publish the matching `CHANGELOG.md` section as GitHub release notes so the
+  Home Assistant update dialog shows the changes instead of a compare link.
+- Added release verification: tests, hassfest, HACS validation, and manifest/tag
+  consistency before publishing.
+- Added an IR receiver guide with wiring, ESPHome configuration, code capture,
+  debounce, and testing.
+- Added state/dashboard, configuration, troubleshooting, FAQ, security, and
+  contributor documentation.
+- Restructured the README into a shorter landing page with a quick start.
+- Added a bug report issue template.
+
 ## 0.4.0
 
 - Poll power, channel, channel name, and UI mode from the HDCP data endpoint.

@@ -119,7 +119,7 @@ async def test_entities_created(hass: HomeAssistant, setup_integration) -> None:
 
     assert len(media_players) == 1
     assert len(remotes) == 1
-    assert len(buttons) == 23
+    assert len(buttons) == 27
 
 
 async def test_channel_state_from_data_endpoint(
@@ -576,6 +576,60 @@ async def test_up_down_buttons_send_keys(
     )
 
     LgHdcpClient.async_send_key.assert_has_awaits([call("UP"), call("DOWN")])
+
+
+async def test_hdmi_buttons_send_direct_keys(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """HDMI buttons send the confirmed direct-input keys."""
+    buttons = hass.states.async_entity_ids("button")
+
+    for name in ("HDMI1", "HDMI2", "HDMI3", "HDMI4"):
+        button_id = next(
+            entity_id
+            for entity_id in buttons
+            if hass.states.get(entity_id)
+            .attributes.get("friendly_name", "")
+            .endswith(f" {name}")
+        )
+        await hass.services.async_call(
+            "button", "press", {"entity_id": button_id}, blocking=True
+        )
+
+    LgHdcpClient.async_send_key.assert_has_awaits(
+        [call("HDMI1"), call("HDMI2"), call("HDMI3"), call("HDMI4")]
+    )
+    assert setup_integration.runtime_data.tracker.source == "HDMI4"
+
+
+@pytest.mark.parametrize(
+    "setup_integration",
+    [
+        {
+            CONF_INPUT_SOURCES: {
+                "HDMI1": ["INPUT", "LEFT", "OK"],
+            }
+        }
+    ],
+    indirect=True,
+)
+async def test_media_title_falls_back_to_source(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """The media title shows the input when no channel is known."""
+    entity_id = hass.states.async_entity_ids("media_player")[0]
+
+    await hass.services.async_call(
+        "media_player",
+        "select_source",
+        {"entity_id": entity_id, "source": "HDMI1"},
+        blocking=True,
+    )
+
+    state = hass.states.get(entity_id)
+    assert state.attributes["source"] == "HDMI1"
+    assert state.attributes["media_title"] == "HDMI1"
+    assert "media_channel" not in state.attributes
 
 
 async def test_process_ir_key_service_power(

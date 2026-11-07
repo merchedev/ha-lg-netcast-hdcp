@@ -128,8 +128,12 @@ ruff format --check .
 ## Release process
 
 1. Verify on a real TV.
-2. Update `custom_components/lg_netcast_hdcp/manifest.json` version.
-3. Update `README.md` and `CHANGELOG.md`.
+2. Update `custom_components/lg_netcast_hdcp/manifest.json` and
+   `pyproject.toml` versions.
+3. Update `README.md`, the relevant `docs/` guides, and `CHANGELOG.md`.
 4. Commit with `AI: release vX.Y.Z`.
-5. Tag `vX.Y.Z`.
-6. Publish a GitHub release so HACS can offer the version.
+5. Tag `vX.Y.Z` and push the tag.
+6. The release workflow verifies the tests, hassfest, HACS validation, and
+   manifest/tag consistency, then publishes the matching `CHANGELOG.md` section
+   as the GitHub release body so HACS can offer the version and Home Assistant
+   can show the changes.

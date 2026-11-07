@@ -101,10 +101,13 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         )
 
         if (last_state := await self.async_get_last_state()) is not None:
+            last_channel = last_state.attributes.get("media_channel")
             self._tracker.restore(
                 source=last_state.attributes.get("source"),
-                channel=last_state.attributes.get("media_channel"),
-                channel_name=last_state.attributes.get("media_title"),
+                channel=last_channel,
+                channel_name=(
+                    last_state.attributes.get("media_title") if last_channel else None
+                ),
                 muted=last_state.attributes.get("is_volume_muted"),
                 ui_mode=last_state.attributes.get("ui_mode"),
             )
@@ -311,7 +314,14 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
         self._attr_source = self._tracker.source
         self._attr_media_channel = self._tracker.channel
-        self._attr_media_title = self._tracker.channel_name
+        if self._tracker.channel:
+            self._attr_media_title = (
+                self._tracker.channel_name or f"Channel {self._tracker.channel}"
+            )
+        elif self._tracker.source:
+            self._attr_media_title = self._tracker.source
+        else:
+            self._attr_media_title = None
         self._attr_is_volume_muted = self._tracker.muted
         self.async_write_ha_state()
 
