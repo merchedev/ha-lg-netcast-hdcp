@@ -4,7 +4,7 @@ Start with the quick checks:
 
 - The TV is on and connected to the same network as Home Assistant.
 - TCP port `8080` is reachable from Home Assistant.
-- The integration version is 0.5.0 or newer.
+- The integration version is 0.6.0 or newer.
 - Home Assistant was restarted after updating through HACS.
 - You are looking at the media player attributes in
   **Developer Tools → States**, not only at the entity row.
@@ -87,7 +87,8 @@ want to test another model.
 
 - The integration marks the TV as on after the configured power-on action. The
   next state poll confirms it.
-- The poll runs every 30 seconds.
+- The poll runs every 30 seconds. Home Assistant also schedules one refresh
+  about 15 seconds after a configured power-on action.
 - After an IR power-on, wait 10–15 seconds for the HDCP server to start before
   sending keys.
 - If a command cannot reach the TV, the state becomes `unknown`. Check the IP
@@ -184,7 +185,8 @@ does not use it. Volume level remains assumed. Mute can be tracked from IR.
 The issue appears when **IR receiver state tracking** is off. It explains that
 the active HDMI input and volume are not available. You can:
 
-- configure an IR receiver and enable the option; or
+- configure an IR receiver, then use the issue's **Fix** action to enable the
+  option; or
 - dismiss the issue if you do not need input/mute tracking.
 
 ## Logs and diagnostics

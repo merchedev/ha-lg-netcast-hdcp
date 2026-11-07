@@ -3,7 +3,7 @@
 ## Supported versions
 
 Security fixes are provided for the latest released version. The current line is
-0.5.x.
+0.6.x.
 
 ## Reporting a vulnerability
 

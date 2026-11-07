@@ -107,8 +107,8 @@ player, device, or area.
 ## Why is there a repair issue about state tracking?
 
 It appears when **IR receiver state tracking** is off. It explains that the
-active HDMI input and volume are not available. Configure IR or dismiss the
-issue.
+active HDMI input and volume are not available. Configure IR and use the issue's
+**Fix** action, or dismiss the issue.
 
 ## How do I update?
 

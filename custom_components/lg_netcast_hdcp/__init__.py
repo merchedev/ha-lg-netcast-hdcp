@@ -144,11 +144,13 @@ def _async_sync_state_issue(
         hass,
         DOMAIN,
         issue_id,
-        is_fixable=False,
+        data={"entry_id": entry.entry_id},
+        is_fixable=True,
         is_persistent=True,
         learn_more_url=STATE_TRACKING_URL,
         severity=ir.IssueSeverity.WARNING,
         translation_key="state_not_tracked",
+        translation_placeholders={"name": entry.title},
     )
 
 

@@ -41,6 +41,7 @@ WOL_MAC_PATTERN: Final = r"^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$"
 RAW_KEY_PATTERN: Final = r"^\d{2}$"
 
 POWER_OFF_SOURCE_DELAY: Final = 2.0
+POWER_ON_REFRESH_DELAY: Final = 15.0
 
 SERVICE_PROCESS_IR_KEY: Final = "process_ir_key"
 ATTR_KEY: Final = "key"
@@ -91,6 +92,7 @@ __all__ = [
     "PAIRING_KEY_LENGTH",
     "PAIRING_KEY_PATTERN",
     "POWER_OFF_SOURCE_DELAY",
+    "POWER_ON_REFRESH_DELAY",
     "RAW_KEY_PATTERN",
     "SERVICE_PROCESS_IR_KEY",
     "TURN_ON_METHODS",

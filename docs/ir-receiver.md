@@ -134,7 +134,8 @@ Notes:
 Use only the keys you need. The integration accepts names such as `POWER`,
 `INPUT`, `LEFT`, `RIGHT`, `UP`, `DOWN`, `OK`, `HOME`, `EXIT`, `MUTE`,
 `CHANNEL_UP`, `CHANNEL_DOWN`, `NUMBER_0` to `NUMBER_9`, `HDMI1` to `HDMI4`,
-and `AV1`.
+and `AV1`. The service UI offers these common keys in a dropdown; type a
+two-digit decimal code as a custom value when needed.
 
 Example with two keys:
 
@@ -237,7 +238,8 @@ the ESPHome YAML smaller and the mapping easier to edit in Home Assistant.
 
 The `IR receiver state tracking` option only suppresses the state limitation
 warning. The service itself is always available. Enable the option after the
-receiver works if you want the warning to disappear.
+receiver works if you want the warning to disappear, or use the issue's **Fix**
+action.
 
 ## Security
 

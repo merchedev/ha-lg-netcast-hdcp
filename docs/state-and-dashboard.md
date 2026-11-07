@@ -32,7 +32,7 @@ The channel and source are attributes.
 If you are looking at a media-control card and see no channel, check:
 
 1. Is the TV on a normal channel? On HDMI, `media_channel` is empty by design.
-2. Has the 30-second state poll run?
+2. Has the 30-second state poll or the refresh after power-on run?
 3. Does `media_player.lg_tv` show `media_channel` in
    **Developer Tools → States**?
 4. Is `media_title` showing the source (`HDMI1`) instead of a channel?

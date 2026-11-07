@@ -67,6 +67,7 @@ firmware 0001.0009):
   name, and UI mode.
 - `state.py`: shared best-known state tracker for commands, state polls, and
   optional external IR key events.
+- `repairs.py`: repair flow for the state tracking warning.
 - `media_player.py`: TV entity. Power off, volume, mute, channel tuning,
   configured input sources, source-before-power-off, and conditional power-on.
 - `button.py`: remote-key buttons for common navigation, input, channel, and

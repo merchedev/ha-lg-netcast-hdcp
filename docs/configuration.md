@@ -70,8 +70,10 @@ The selected integration must already be configured and working.
 Send Wake-on-LAN and then run the custom action.
 
 After the action completes, the media player marks the TV as on. The state is
-optimistic until the next state poll confirms it. The HDCP server takes about
-10–15 seconds to start after the TV powers on; add a delay before sending keys.
+optimistic until the next state poll confirms it. The integration schedules one
+refresh about 15 seconds after a configured power-on action, and then polls every
+30 seconds. The HDCP server takes about 10–15 seconds to start after the TV
+powers on; add a delay before sending keys.
 
 ## Apple TV and other HDMI-CEC sources
 
@@ -193,8 +195,17 @@ The action only updates state; it does not send IR. See
 code capture, and troubleshooting.
 
 After configuring the receiver, enable **IR receiver state tracking** to
-suppress the state limitation repair issue. The service works even when this
-option is off.
+suppress the state limitation repair issue. You can also use the **Fix** action
+on that issue. The service works even when this option is off.
+
+## Upgrading from 0.5.0
+
+- The state tracking repair issue now has a **Fix** action to enable IR
+  receiver state tracking.
+- The IR service key field offers common keys in a dropdown; type a raw code as
+  a custom value.
+- A state refresh runs about 15 seconds after a configured power-on action.
+- Restart Home Assistant after updating through HACS.
 
 ## Upgrading from 0.4.1
 

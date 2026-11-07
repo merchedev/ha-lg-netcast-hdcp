@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+- Added a key selector to the IR state tracking service.
+- Added a repair flow to enable IR receiver state tracking.
+- Schedule a state refresh about 15 seconds after a power-on action.
+- Updated the troubleshooting and IR guides for the repair flow and service
+  selector.
+
 ## 0.5.0
 
 - HDMI1–HDMI4 and AV1 are available in the source selector automatically.

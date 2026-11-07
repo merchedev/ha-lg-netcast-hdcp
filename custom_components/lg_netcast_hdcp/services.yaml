@@ -16,4 +16,35 @@ process_ir_key:
       required: true
       example: INPUT
       selector:
-        text:
+        select:
+          custom_value: true
+          options:
+            - POWER
+            - INPUT
+            - OK
+            - LEFT
+            - RIGHT
+            - UP
+            - DOWN
+            - HOME
+            - EXIT
+            - MUTE
+            - VOLUME_UP
+            - VOLUME_DOWN
+            - CHANNEL_UP
+            - CHANNEL_DOWN
+            - NUMBER_0
+            - NUMBER_1
+            - NUMBER_2
+            - NUMBER_3
+            - NUMBER_4
+            - NUMBER_5
+            - NUMBER_6
+            - NUMBER_7
+            - NUMBER_8
+            - NUMBER_9
+            - HDMI1
+            - HDMI2
+            - HDMI3
+            - HDMI4
+            - AV1

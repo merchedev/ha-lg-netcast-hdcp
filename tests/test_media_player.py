@@ -759,6 +759,9 @@ async def test_state_warning_issue_created(
         f"state_not_tracked_{setup_integration.entry_id}",
     )
     assert issue is not None
+    assert issue.is_fixable is True
+    assert issue.data == {"entry_id": setup_integration.entry_id}
+    assert issue.translation_placeholders == {"name": "LG TV"}
 
 
 @pytest.mark.parametrize(

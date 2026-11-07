@@ -14,10 +14,11 @@ from homeassistant.components.media_player import (
     MediaType,
 )
 from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HassJob, HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.event import async_call_later
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.service import async_call_from_config
 
@@ -37,6 +38,7 @@ from .const import (
     MANUFACTURER,
     MODEL,
     POWER_OFF_SOURCE_DELAY,
+    POWER_ON_REFRESH_DELAY,
     TURN_ON_METHOD_ACTION,
     TURN_ON_METHOD_BOTH,
     TURN_ON_METHOD_NONE,
@@ -202,6 +204,21 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
             await self._async_run_turn_on_action()
 
         self._tracker.set_power(True)
+        self.async_on_remove(
+            async_call_later(
+                self.hass,
+                POWER_ON_REFRESH_DELAY,
+                HassJob(
+                    self._async_refresh_after_power_on,
+                    "LG TV state refresh after power on",
+                    cancel_on_shutdown=True,
+                ),
+            )
+        )
+
+    async def _async_refresh_after_power_on(self, _now) -> None:
+        """Refresh state after the TV has had time to boot."""
+        await self._entry.runtime_data.coordinator.async_request_refresh()
 
     async def _async_run_turn_on_action(self) -> None:
         """Run the configured custom turn-on action."""
