@@ -74,13 +74,3 @@ HDCP_KEY_ALIASES: Final[dict[str, str]] = {
     "HDMI_3": "233",
     "HDMI_4": "218",
 }
-
-DIRECT_INPUT_KEYS: Final[frozenset[str]] = frozenset(
-    {"HDMI1", "HDMI2", "HDMI3", "HDMI4", "AV1"}
-)
-
-
-def direct_input_key(source: str) -> str | None:
-    """Return the confirmed direct-input key for a source name, if any."""
-    normalized = "".join(str(source).strip().upper().split())
-    return normalized if normalized in DIRECT_INPUT_KEYS else None

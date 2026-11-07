@@ -135,6 +135,63 @@ async def test_channel_state_from_data_endpoint(
     assert state.attributes["ui_mode"] == "VolCh"
 
 
+async def test_source_list_includes_direct_inputs(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """HDMI direct inputs are available without an input sources mapping."""
+    entity_id = hass.states.async_entity_ids("media_player")[0]
+    state = hass.states.get(entity_id)
+
+    assert state.attributes["source_list"] == [
+        "HDMI1",
+        "HDMI2",
+        "HDMI3",
+        "HDMI4",
+        "AV1",
+    ]
+    assert (
+        state.attributes["supported_features"] & MediaPlayerEntityFeature.SELECT_SOURCE
+    )
+
+    await hass.services.async_call(
+        "media_player",
+        "select_source",
+        {"entity_id": entity_id, "source": "HDMI3"},
+        blocking=True,
+    )
+
+    LgHdcpClient.async_send_key.assert_awaited_with("HDMI3")
+    assert hass.states.get(entity_id).attributes["source"] == "HDMI3"
+
+
+@pytest.mark.parametrize(
+    "setup_integration",
+    [{CONF_POWER_OFF_SOURCE: "HDMI1"}],
+    indirect=True,
+)
+async def test_power_off_source_direct_without_input_sources(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """A direct input can be selected before standby without a mapping."""
+    entity_id = hass.states.async_entity_ids("media_player")[0]
+
+    with patch(
+        "custom_components.lg_netcast_hdcp.media_player.asyncio.sleep",
+        new=AsyncMock(),
+    ) as sleep:
+        await hass.services.async_call(
+            "media_player",
+            "turn_off",
+            {"entity_id": entity_id},
+            blocking=True,
+        )
+
+    LgHdcpClient.async_send_key.assert_has_awaits([call("HDMI1"), call("POWER")])
+    sleep.assert_awaited_once_with(POWER_OFF_SOURCE_DELAY)
+    assert setup_integration.runtime_data.tracker.source == "HDMI1"
+    assert hass.states.get(entity_id).state == STATE_OFF
+
+
 async def test_turn_off_sends_power(hass: HomeAssistant, setup_integration) -> None:
     """Turning off sends the POWER key."""
     entity_id = hass.states.async_entity_ids("media_player")[0]
@@ -470,7 +527,7 @@ async def test_turn_off_selects_direct_power_off_source(
             CONF_INPUT_SOURCES: {
                 "HDMI1": ["INPUT", "LEFT", "OK"],
             },
-            CONF_POWER_OFF_SOURCE: "HDMI2",
+            CONF_POWER_OFF_SOURCE: "HDMI9",
         }
     ],
     indirect=True,

@@ -4,7 +4,7 @@ Start with the quick checks:
 
 - The TV is on and connected to the same network as Home Assistant.
 - TCP port `8080` is reachable from Home Assistant.
-- The integration version is 0.4.1 or newer.
+- The integration version is 0.5.0 or newer.
 - Home Assistant was restarted after updating through HACS.
 - You are looking at the media player attributes in
   **Developer Tools → States**, not only at the entity row.
@@ -128,8 +128,9 @@ an IR receiver and configure the input menu sequence if you need exact tracking.
 
 ### Input selection does nothing
 
-For `HDMI1`–`HDMI4` and `AV1`, the integration uses confirmed direct keys. If
-you use another source name, the configured sequence must match your TV menu.
+For `HDMI1`–`HDMI4` and `AV1`, the integration uses confirmed direct keys. These
+inputs work without an `input_sources` mapping. If you use another source name,
+the configured sequence must match your TV menu.
 
 1. Test the keys with the `remote` entity.
 2. Open the input menu and note the key presses that select the source.

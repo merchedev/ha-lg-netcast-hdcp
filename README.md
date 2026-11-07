@@ -81,6 +81,8 @@ the TV is on.
 | Know which HDMI input is active after using the TV remote | IR receiver |
 | Show the channel on a dashboard | Media-control card or an attribute card |
 | Use a normal TV remote to track mute | IR receiver |
+| Select HDMI1–HDMI4 or AV1 | No mapping needed; they are in the source selector |
+| Use a custom source name or non-direct input | `input_sources` |
 
 You do **not** need an IR receiver for power, channel, or UI mode. It is optional.
 
@@ -88,10 +90,12 @@ You do **not** need an IR receiver for power, channel, or UI mode. It is optiona
 
 - Turn off the TV, control volume, mute, and tune to a channel by number.
 - Poll power, channel, channel name, and UI mode from the HDCP data endpoint.
-- Direct input keys for HDMI1–HDMI4 and AV1.
+- Direct input keys for HDMI1–HDMI4 and AV1, available automatically in the
+  source selector.
 - Buttons for Home, OK, Input, HDMI1–HDMI4, Left/Right/Up/Down, channels,
   Q.Menu, Timer, TV/Radio, Exit, and digits.
-- Configurable input-source sequences for other inputs and IR tracking.
+- Configurable input-source sequences for custom or non-direct inputs and IR
+  tracking.
 - Optional Wake-on-LAN or custom-action power-on.
 - Optional source-before-power-off for HDMI-CEC wake compatibility.
 - Optional external IR receiver state tracking.
@@ -135,7 +139,7 @@ channel instead of only “Encendido”.
 - `volume_up` / `volume_down`
 - `volume_mute`
 - `play_media` with `media_content_type: channel`
-- `select_source` for configured sources
+- `select_source` for direct and configured sources
 
 ### `button` and `remote`
 

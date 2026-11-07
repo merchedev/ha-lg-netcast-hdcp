@@ -29,21 +29,27 @@ from Home Assistant are tracked.
 
 ## Do I need `input_sources`?
 
-It depends on what you want:
+It is optional for the confirmed direct inputs:
 
-- For a simple `HDMI1` button or `remote.send_command: HDMI1`, no.
-- For the source selector, `select_source`, `Source before power off`, custom
-  source names, or IR tracking of the TV input menu, yes.
+- `HDMI1`–`HDMI4` and `AV1` are in the source selector automatically.
+- `select_source` and `Source before power off` work with those names without a
+  mapping.
+- The HDMI1–HDMI4 buttons and `remote.send_command: HDMI1` do not need it.
 
-Minimal example:
+Use `input_sources` for a custom name, a non-direct input, or IR tracking of the
+TV input menu.
+
+For a custom source, map the name to the sequence the TV needs:
 
 ```yaml
 input_sources:
-  HDMI1:
-    - HDMI1
+  Satellite:
+    - INPUT
+    - RIGHT
+    - OK
 ```
 
-For IR tracking of the input menu, use the sequence the TV uses:
+For IR tracking of a direct input menu, use the sequence the TV uses:
 
 ```yaml
 input_sources:

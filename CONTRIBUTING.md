@@ -49,12 +49,12 @@ direct-input codes.
 ## Adding a model profile
 
 Model-specific behavior should live in `profiles.py`, not in the integration
-logic. A profile should eventually own:
+logic. A profile owns:
 
 - the key map;
 - direct-input keys;
-- invalid channel sentinel values;
-- supported state queries.
+- invalid channel and physical-number sentinel values;
+- the no-subchannel sentinel.
 
 If you add a model, add tests and a note to the README and docs.
 

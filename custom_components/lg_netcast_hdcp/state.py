@@ -9,10 +9,11 @@ external IR receiver.
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any, Final
 
-from .keys import DIRECT_INPUT_KEYS, HDCP_KEY_ALIASES, HDCP_KEYS
+from .keys import HDCP_KEY_ALIASES, HDCP_KEYS
+from .profiles import normalize_source_name
 
 KEY_SEQUENCE_TIMEOUT: Final = 5.0
 CHANNEL_ENTRY_TIMEOUT: Final = 3.0
@@ -38,7 +39,11 @@ def resolve_key_name(value: str) -> str | None:
 class TvStateTracker:
     """Track the best-known state of a television."""
 
-    def __init__(self, input_sources: dict[str, list[str]] | None = None) -> None:
+    def __init__(
+        self,
+        input_sources: dict[str, list[str]] | None = None,
+        direct_input_keys: Mapping[str, str] | None = None,
+    ) -> None:
         """Initialize the tracker."""
         self.power: bool | None = False
         self.source: str | None = None
@@ -48,6 +53,10 @@ class TvStateTracker:
         self.ui_mode: str | None = None
 
         self._sources: dict[str, list[str]] = {}
+        self._direct_input_keys: dict[str, str] = {
+            key_name.upper(): source_name
+            for source_name, key_name in (direct_input_keys or {}).items()
+        }
         self._listeners: list[Callable[[], None]] = []
         self._key_buffer: list[str] = []
         self._channel_buffer = ""
@@ -215,8 +224,8 @@ class TvStateTracker:
             self._key_buffer.clear()
             return
 
-        if key in DIRECT_INPUT_KEYS:
-            self.source = self._source_name_for_key(key)
+        if key in self._direct_input_keys:
+            self.source = self._source_name_for_key(key, self._direct_input_keys[key])
             self.channel = None
             self.channel_name = None
             self._key_buffer.clear()
@@ -275,13 +284,13 @@ class TvStateTracker:
         step = 1 if key == "CHANNEL_UP" else -1
         return str(max(int(self.channel) + step, 0))
 
-    def _source_name_for_key(self, key: str) -> str:
+    def _source_name_for_key(self, key: str, fallback: str) -> str:
         """Return the configured source name for a direct-input key."""
-        normalized = "".join(key.upper().split())
+        normalized = normalize_source_name(key)
         for name in self._sources:
-            if "".join(name.upper().split()) == normalized:
+            if normalize_source_name(name) == normalized:
                 return name
-        return key
+        return fallback
 
     def _trim_key_buffer(self) -> None:
         """Keep only the longest configured sequence length."""

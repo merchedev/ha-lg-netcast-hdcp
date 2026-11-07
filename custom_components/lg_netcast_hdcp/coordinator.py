@@ -11,12 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 
-from .const import (
-    DOMAIN,
-    INVALID_CHANNEL_MAJOR,
-    INVALID_PHYSICAL_NUM,
-    NO_SUBCHANNEL,
-)
+from .const import DOMAIN
 from .hdcp import HdcpAuthError, HdcpConnectionError, HdcpError, LgHdcpClient
 from .state import TvStateTracker
 
@@ -126,8 +121,8 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
             ui_mode=self.data.ui_mode,
         )
 
-    @staticmethod
     def _parse_channel(
+        self,
         root: ElementTree.Element,
     ) -> tuple[str | None, str | None]:
         """Parse the current-channel response."""
@@ -135,6 +130,7 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
         if data is None:
             return None, None
 
+        profile = self._client.profile
         major = data.findtext("major")
         minor = data.findtext("minor")
         physical_num = data.findtext("physicalNum")
@@ -142,11 +138,11 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
 
         if (
             not major
-            or major == INVALID_CHANNEL_MAJOR
-            or physical_num == INVALID_PHYSICAL_NUM
+            or major == profile.invalid_channel_major
+            or physical_num == profile.invalid_physical_num
         ):
             return None, None
 
-        if minor and minor != NO_SUBCHANNEL:
+        if minor and minor != profile.no_subchannel:
             return f"{major}.{minor}", name
         return major, name

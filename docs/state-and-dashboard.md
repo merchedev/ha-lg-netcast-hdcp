@@ -17,7 +17,7 @@ the channel and input details in attributes.
 
 The integration also exposes these services and controls:
 
-- `media_player.select_source` for configured sources;
+- `media_player.select_source` for direct and configured sources;
 - `media_player.play_media` with `media_content_type: channel`;
 - `remote.send_command` for named keys and raw codes;
 - `lg_netcast_hdcp.process_ir_key` for an external IR receiver;

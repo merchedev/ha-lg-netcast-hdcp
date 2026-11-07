@@ -41,6 +41,7 @@ from .hdcp import (
     HdcpError,
     LgHdcpClient,
 )
+from .profiles import DEFAULT_PROFILE, normalize_source_name
 from .wol import normalize_mac
 
 PAIRING_KEY_SCHEMA = vol.Schema(
@@ -262,6 +263,43 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
         current = self.config_entry.options
         errors: dict[str, str] = {}
 
+        current_sources = current.get(CONF_INPUT_SOURCES, {})
+        custom_source_names = (
+            list(current_sources) if isinstance(current_sources, dict) else []
+        )
+        source_options: list[str] = []
+        seen_sources: set[str] = set()
+        for name in [
+            *custom_source_names,
+            *DEFAULT_PROFILE.direct_input_keys,
+        ]:
+            normalized = normalize_source_name(name)
+            if normalized in seen_sources:
+                continue
+            seen_sources.add(normalized)
+            source_options.append(name)
+
+        current_power_off_source = current.get(CONF_POWER_OFF_SOURCE, "")
+        if (
+            current_power_off_source
+            and normalize_source_name(current_power_off_source) not in seen_sources
+        ):
+            source_options.append(current_power_off_source)
+
+        default_power_off_source = current_power_off_source or "(none)"
+        if current_power_off_source:
+            matching_option = next(
+                (
+                    name
+                    for name in source_options
+                    if normalize_source_name(name)
+                    == normalize_source_name(current_power_off_source)
+                ),
+                None,
+            )
+            if matching_option is not None:
+                default_power_off_source = matching_option
+
         if user_input is not None:
             method = user_input[CONF_TURN_ON_METHOD]
             mac = user_input.get(CONF_WOL_MAC, "").strip()
@@ -272,17 +310,23 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
             power_off_source = str(
                 user_input.get(CONF_POWER_OFF_SOURCE, "") or ""
             ).strip()
+            if power_off_source == "(none)":
+                power_off_source = ""
             ir_state_tracking = bool(user_input.get(CONF_IR_STATE_TRACKING, False))
 
             if source_error:
                 errors[CONF_INPUT_SOURCES] = source_error
             elif power_off_source:
-                normalized_power_off_source = "".join(power_off_source.upper().split())
+                valid_sources = [
+                    *(sources or {}),
+                    *DEFAULT_PROFILE.direct_input_keys,
+                ]
+                normalized_power_off_source = normalize_source_name(power_off_source)
                 matching_source = next(
                     (
                         name
-                        for name in (sources or {})
-                        if "".join(name.upper().split()) == normalized_power_off_source
+                        for name in valid_sources
+                        if normalize_source_name(name) == normalized_power_off_source
                     ),
                     None,
                 )
@@ -355,8 +399,14 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
                     ): selector.ObjectSelector(),
                     vol.Optional(
                         CONF_POWER_OFF_SOURCE,
-                        default=current.get(CONF_POWER_OFF_SOURCE, ""),
-                    ): cv.string,
+                        default=default_power_off_source,
+                    ): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=["(none)", *source_options],
+                            custom_value=True,
+                            mode=selector.SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
                     vol.Optional(
                         CONF_IR_STATE_TRACKING,
                         default=current.get(CONF_IR_STATE_TRACKING, False),

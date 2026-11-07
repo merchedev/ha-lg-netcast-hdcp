@@ -112,7 +112,10 @@ async def async_setup_entry(
         async_get_clientsession(hass),
     )
     sources = entry.options.get(CONF_INPUT_SOURCES, {})
-    tracker = TvStateTracker(sources if isinstance(sources, dict) else {})
+    tracker = TvStateTracker(
+        sources if isinstance(sources, dict) else {},
+        client.profile.direct_input_keys,
+    )
     coordinator = LgNetcastHdcpCoordinator(hass, entry, client, tracker)
 
     entry.runtime_data = LgNetcastHdcpRuntimeData(

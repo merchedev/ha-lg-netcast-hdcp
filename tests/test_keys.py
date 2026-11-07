@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from custom_components.lg_netcast_hdcp.keys import HDCP_KEYS
+from custom_components.lg_netcast_hdcp.profiles import DEFAULT_PROFILE
 
 
 def test_number_codes_skip_the_letter_gap() -> None:
@@ -40,3 +41,13 @@ def test_confirmed_direct_input_and_vertical_codes() -> None:
     assert HDCP_KEYS["HDMI2"] == "204"
     assert HDCP_KEYS["HDMI3"] == "233"
     assert HDCP_KEYS["HDMI4"] == "218"
+
+
+def test_profile_direct_inputs_and_channel_sentinels() -> None:
+    """The profile owns direct inputs and channel sentinel values."""
+    assert DEFAULT_PROFILE.direct_input_key("HDMI 1") == "HDMI1"
+    assert DEFAULT_PROFILE.direct_input_source("hdmi2") == "HDMI2"
+    assert DEFAULT_PROFILE.direct_input_key("VGA") is None
+    assert DEFAULT_PROFILE.invalid_channel_major == "16368"
+    assert DEFAULT_PROFILE.invalid_physical_num == "65535"
+    assert DEFAULT_PROFILE.no_subchannel == "65535"

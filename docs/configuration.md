@@ -34,8 +34,8 @@ Open **Settings → Devices & services → LG NetCast HDCP → Configure**.
 | Broadcast address | IPv4 address | `255.255.255.255` | Wake-on-LAN broadcast |
 | Broadcast port | 1–65535 | `9` | Wake-on-LAN port |
 | Custom turn-on action | Home Assistant action | Empty | IR, CEC, RS-232C, or script |
-| Input sources | Mapping of names to key sequences | Empty | Source selector and IR tracking |
-| Source before power off | Source name from Input sources | Empty | Leave the TV on a CEC input before standby |
+| Input sources | Mapping of names to key sequences | Empty | Custom sources, non-direct inputs, and IR sequences |
+| Source before power off | Direct input or custom source | None | Leave the TV on a CEC input before standby |
 | IR receiver state tracking | Boolean | Off | Acknowledge external IR state updates and hide the warning |
 
 ## Power-on methods
@@ -100,20 +100,28 @@ CEC event. Turn the Apple TV off too, or use IR, RS-232C, or a USB-CEC adapter.
 
 ## Input sources
 
-The integration uses confirmed direct keys for `HDMI1`–`HDMI4` and `AV1` on the
-tested model. Configure the source names you use:
+`HDMI1`–`HDMI4` and `AV1` are available automatically on the tested model. The
+source selector includes them without any configuration, and the integration
+sends their confirmed direct keys.
+
+`input_sources` is now only needed for:
+
+- an input without a confirmed direct key;
+- a custom display name for a source;
+- the TV input-menu sequence used by the IR receiver.
+
+Example for a custom name:
 
 ```yaml
 input_sources:
-  HDMI1:
-    - HDMI1
-  HDMI2:
-    - HDMI2
+  Satellite:
+    - INPUT
+    - RIGHT
+    - OK
 ```
 
-If the name matches `HDMI1`, `HDMI2`, `HDMI3`, `HDMI4`, or `AV1`, the
-integration sends the direct key when you select that source. The sequence is a
-fallback and is also used for IR state tracking.
+If the custom name maps to a direct input, the direct key still works. For
+example, `HDMI 1` maps to the `HDMI1` direct key.
 
 To follow input changes made with the TV remote, configure the sequence used by
 the TV input menu:
@@ -151,8 +159,9 @@ For more key names and raw codes, see [keycodes.md](keycodes.md).
 
 This option is intended for HDMI-CEC wake compatibility.
 
-1. Configure the source in **Input sources**.
-2. Set **Source before power off** to that source name.
+1. Select the source in **Source before power off**. `HDMI1`–`HDMI4` and `AV1`
+   are offered directly.
+2. If you use a custom source, add it in **Input sources** first.
 3. Turn off the TV from Home Assistant.
 
 The integration sends the source key or sequence, waits about two seconds, and
@@ -165,7 +174,9 @@ integration cannot change the input after the TV has already entered standby.
 
 The HDCP data endpoint reports power, channel, channel name, and UI mode. It
 does **not** report the active HDMI input or the volume. An external IR receiver
-can fill the input and mute gaps.
+can fill the input and mute gaps. Direct inputs work without `input_sources`; add
+the input-menu sequence only if you want to follow changes made with the TV
+remote.
 
 Configure the receiver to call:
 
@@ -184,6 +195,15 @@ code capture, and troubleshooting.
 After configuring the receiver, enable **IR receiver state tracking** to
 suppress the state limitation repair issue. The service works even when this
 option is off.
+
+## Upgrading from 0.4.1
+
+- HDMI1–HDMI4 and AV1 appear in the source selector automatically.
+- `input_sources` is optional for those direct inputs.
+- **Source before power off** is now a selector; direct inputs do not need an
+  input sources mapping.
+- Keep `input_sources` for custom names, non-direct inputs, and IR sequences.
+- Restart Home Assistant after updating through HACS.
 
 ## Upgrading from 0.4.0
 

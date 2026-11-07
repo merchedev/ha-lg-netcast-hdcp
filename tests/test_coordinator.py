@@ -15,6 +15,7 @@ from custom_components.lg_netcast_hdcp.hdcp import (
     HdcpConnectionError,
     HdcpProtocolError,
 )
+from custom_components.lg_netcast_hdcp.profiles import DEFAULT_PROFILE
 from custom_components.lg_netcast_hdcp.state import TvStateTracker
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -64,6 +65,7 @@ def _coordinator(
 ) -> LgNetcastHdcpCoordinator:
     """Create a coordinator with a fake data endpoint."""
     client = AsyncMock()
+    client.profile = DEFAULT_PROFILE
 
     def query(target: str) -> ElementTree.Element:
         if target == "cur_channel":

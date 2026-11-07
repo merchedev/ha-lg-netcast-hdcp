@@ -270,13 +270,41 @@ async def test_options_flow_rejects_unknown_power_off_source(hass) -> None:
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [],
             CONF_INPUT_SOURCES: {"hdmi1": ["INPUT", "LEFT", "OK"]},
-            CONF_POWER_OFF_SOURCE: "hdmi2",
+            CONF_POWER_OFF_SOURCE: "hdmi9",
             CONF_IR_STATE_TRACKING: False,
         },
     )
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {CONF_POWER_OFF_SOURCE: "unknown_source"}
+
+
+async def test_options_flow_allows_direct_power_off_source(hass) -> None:
+    """A direct input can be selected without an input sources mapping."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_TURN_ON_METHOD: "none",
+            CONF_WOL_MAC: "",
+            CONF_WOL_BROADCAST: "255.255.255.255",
+            CONF_WOL_PORT: 9,
+            CONF_TURN_ON_ACTION: [],
+            CONF_INPUT_SOURCES: {},
+            CONF_POWER_OFF_SOURCE: "HDMI1",
+            CONF_IR_STATE_TRACKING: False,
+        },
+    )
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    assert entry.options[CONF_POWER_OFF_SOURCE] == "HDMI1"
 
 
 async def test_reconfigure_flow_updates_host(hass, mock_client) -> None:

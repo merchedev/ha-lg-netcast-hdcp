@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0
+
+- HDMI1–HDMI4 and AV1 are available in the source selector automatically.
+- `input_sources` is optional for direct inputs; keep it for custom names,
+  non-direct inputs, and IR tracking.
+- **Source before power off** is now a selector of direct and custom sources.
+- Moved direct-input keys and channel sentinel values into the model profile.
+- Added tests and documentation for the optional source mapping.
+
 ## 0.4.1
 
 - Added HDMI1–HDMI4 buttons.

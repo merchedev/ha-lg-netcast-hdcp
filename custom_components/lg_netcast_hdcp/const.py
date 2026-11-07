@@ -41,9 +41,6 @@ WOL_MAC_PATTERN: Final = r"^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$"
 RAW_KEY_PATTERN: Final = r"^\d{2}$"
 
 POWER_OFF_SOURCE_DELAY: Final = 2.0
-INVALID_CHANNEL_MAJOR: Final = "16368"
-INVALID_PHYSICAL_NUM: Final = "65535"
-NO_SUBCHANNEL: Final = "65535"
 
 SERVICE_PROCESS_IR_KEY: Final = "process_ir_key"
 ATTR_KEY: Final = "key"
@@ -87,13 +84,10 @@ __all__ = [
     "HDCP_KEYS",
     "HDCP_KEY_ALIASES",
     "HDCP_SESSION",
-    "INVALID_CHANNEL_MAJOR",
-    "INVALID_PHYSICAL_NUM",
     "ISSUE_STATE_NOT_TRACKED",
     "MANUFACTURER",
     "MODEL",
     "NAME",
-    "NO_SUBCHANNEL",
     "PAIRING_KEY_LENGTH",
     "PAIRING_KEY_PATTERN",
     "POWER_OFF_SOURCE_DELAY",

@@ -43,7 +43,7 @@ from .const import (
     TURN_ON_METHOD_WOL,
 )
 from .hdcp import HdcpAuthError, HdcpError
-from .keys import direct_input_key
+from .profiles import normalize_source_name
 from .wol import async_send_magic_packet
 
 _LOGGER = logging.getLogger(__name__)
@@ -120,14 +120,19 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         features = BASE_FEATURES
         if self._turn_on_method != TURN_ON_METHOD_NONE:
             features |= MediaPlayerEntityFeature.TURN_ON
-        if self._input_sources:
+        if self.source_list:
             features |= MediaPlayerEntityFeature.SELECT_SOURCE
         return features
 
     @property
     def source_list(self) -> list[str] | None:
-        """Return configured input sources."""
-        return list(self._input_sources) if self._input_sources else None
+        """Return configured sources plus confirmed direct inputs."""
+        sources = list(self._input_sources)
+        known = {normalize_source_name(name) for name in sources}
+        for name in self._client.profile.direct_input_keys:
+            if normalize_source_name(name) not in known:
+                sources.append(name)
+        return sources or None
 
     @property
     def source(self) -> str | None:
@@ -223,24 +228,40 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
     async def _async_select_power_off_source(self, source: str) -> None:
         """Select the configured source before entering standby."""
-        if source not in self._input_sources:
+        configured_source = next(
+            (
+                name
+                for name in self._input_sources
+                if normalize_source_name(name) == normalize_source_name(source)
+            ),
+            None,
+        )
+        direct_source = self._client.profile.direct_input_source(source)
+
+        if configured_source is not None:
+            source = configured_source
+            sequence = self._input_sources[source]
+            direct_key = self._client.profile.direct_input_key(source)
+        elif direct_source is not None:
+            source = direct_source
+            sequence = None
+            direct_key = self._client.profile.direct_input_key(source)
+        else:
             _LOGGER.debug(
-                "Power-off source %s is not in the input sources mapping",
+                "Power-off source %s is not a direct input or configured source",
                 source,
             )
             return
 
-        direct_key = direct_input_key(source)
         if direct_key is not None:
             if await self._async_send(direct_key):
                 await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
                 self._tracker.set_source(source)
             return
 
-        sequence = self._input_sources.get(source)
         if not sequence:
             _LOGGER.debug(
-                "Power-off source %s has no direct key or configured sequence",
+                "Power-off source %s has no configured sequence",
                 source,
             )
             return
@@ -266,21 +287,40 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
     async def async_select_source(self, source: str) -> None:
         """Select an input source using a direct key or key sequence."""
-        if source not in self._input_sources:
+        configured_source = next(
+            (
+                name
+                for name in self._input_sources
+                if normalize_source_name(name) == normalize_source_name(source)
+            ),
+            None,
+        )
+        direct_source = self._client.profile.direct_input_source(source)
+
+        if configured_source is not None:
+            source = configured_source
+            sequence = self._input_sources[source]
+            direct_key = self._client.profile.direct_input_key(source)
+        elif direct_source is not None:
+            source = direct_source
+            sequence = None
+            direct_key = self._client.profile.direct_input_key(source)
+        else:
             raise HomeAssistantError(f"Unknown input source: {source}")
 
-        direct_key = direct_input_key(source)
         if direct_key is not None:
-            if await self._async_send(direct_key):
-                self._tracker.set_source(source)
+            if not await self._async_send(direct_key):
+                raise HomeAssistantError(f"Could not select source: {source}")
+            self._tracker.set_source(source)
             return
 
-        sequence = self._input_sources.get(source)
         if not sequence:
             raise HomeAssistantError(f"Unknown input source: {source}")
 
-        if await self._async_send_sequence(sequence):
-            self._tracker.set_source(source)
+        if not await self._async_send_sequence(sequence):
+            raise HomeAssistantError(f"Could not select source: {source}")
+
+        self._tracker.set_source(source)
 
     async def async_play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any

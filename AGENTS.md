@@ -75,8 +75,9 @@ firmware 0001.0009):
   input names such as `HDMI1`, and raw two-digit decimal codes from `00` to
   `99`.
 - `wol.py`: Wake-on-LAN magic packet helper.
-- `profiles.py`: model/protocol profiles and key maps. Adding a model should
-  mean adding a profile, not changing integration logic.
+- `profiles.py`: model/protocol profiles, key maps, direct-input keys, and
+  channel sentinel values. Adding a model should mean adding a profile, not
+  changing integration logic.
 - `diagnostics.py`: redacted diagnostics. Pairing keys and sessions must never
   appear in the output.
 

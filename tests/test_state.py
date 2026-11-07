@@ -33,7 +33,8 @@ def test_direct_input_key_updates_source() -> None:
         {
             "HDMI1": ["INPUT", "LEFT", "OK"],
             "HDMI 2": ["INPUT", "LEFT", "LEFT", "OK"],
-        }
+        },
+        {"HDMI1": "HDMI1", "HDMI2": "HDMI2"},
     )
     tracker.apply(channel="21", channel_name="VEO 7")
 
