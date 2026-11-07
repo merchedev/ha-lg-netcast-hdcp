@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.2
+
+- Declared the integration as config-entry only so hassfest no longer reports a
+  missing `CONFIG_SCHEMA`.
+
 ## 0.6.1
 
 - Fixed the state tracking repair issue so hassfest accepts its translation

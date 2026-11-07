@@ -4,7 +4,7 @@ Start with the quick checks:
 
 - The TV is on and connected to the same network as Home Assistant.
 - TCP port `8080` is reachable from Home Assistant.
-- The integration version is 0.6.1 or newer.
+- The integration version is 0.6.2 or newer.
 - Home Assistant was restarted after updating through HACS.
 - You are looking at the media player attributes in
   **Developer Tools → States**, not only at the entity row.

@@ -46,6 +46,8 @@ PLATFORMS: list[Platform] = [
 
 STATE_TRACKING_URL = "https://github.com/merchedev/ha-lg-netcast-hdcp#state-tracking"
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 
 @dataclass
 class LgNetcastHdcpRuntimeData:
