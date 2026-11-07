@@ -24,12 +24,14 @@ jobs:
       - name: Update v0.6.0 release
         env:
           GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
           set +e
           {
             gh --version
             gh auth status
-            gh release view v0.6.0 --json id,tagName,isDraft
+            gh release list --limit 20
+            gh release view v0.6.0 --json tagName,isDraft
             gh release edit v0.6.0 --notes-file release-notes.md
           } > gh-output.txt 2>&1
           status=$?
