@@ -1,0 +1,19 @@
+process_ir_key:
+  name: Process IR key
+  description: >-
+    Update the television state from a key received by an external IR receiver.
+    The key is not sent to the television.
+  target:
+    entity:
+      domain: media_player
+      integration: lg_netcast_hdcp
+  fields:
+    key:
+      name: Key
+      description: >-
+        Key name such as POWER, INPUT, OK, NUMBER_1, HDMI1, or UP, or a
+        two-digit decimal code from 00 to 99.
+      required: true
+      example: INPUT
+      selector:
+        text:

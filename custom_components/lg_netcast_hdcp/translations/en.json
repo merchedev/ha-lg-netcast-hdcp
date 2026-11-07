@@ -55,21 +55,25 @@
     "step": {
       "init": {
         "title": "LG NetCast HDCP options",
-        "description": "Configure how Home Assistant powers on the TV and, optionally, map input sources to key sequences.",
+        "description": "Configure how Home Assistant powers on the TV, maps input sources, and tracks state.",
         "data": {
           "turn_on_method": "Power-on method",
           "wol_mac": "MAC address",
           "wol_broadcast": "Broadcast address",
           "wol_port": "Broadcast port",
           "turn_on_action": "Custom turn-on action",
-          "input_sources": "Input sources"
+          "input_sources": "Input sources",
+          "power_off_source": "Source before power off",
+          "ir_state_tracking": "IR receiver state tracking"
         },
         "data_description": {
-          "turn_on_method": "Choose how Home Assistant should power on the TV. Leave it as none to hide the turn-on button.",
+          "turn_on_method": "Choose how Home Assistant should power on the TV. Leave it as none to hide the turn-on button. Wake-on-LAN is not supported by every 2011 model.",
           "wol_mac": "Ethernet MAC address of the TV.",
           "wol_broadcast": "IPv4 broadcast address for the magic packet.",
           "turn_on_action": "Action to run for IR, CEC, or another power-on method. An IR integration must already be configured.",
-          "input_sources": "Optional mapping of source names to key sequences. Example: HDMI1 with INPUT, DOWN, OK."
+          "input_sources": "Optional mapping of source names to key sequences. Example: HDMI1 with INPUT, LEFT, OK. Named HDMI1-HDMI4 and AV1 sources use confirmed direct keys automatically.",
+          "power_off_source": "Optional source from the input sources mapping to select before entering standby. Set this to HDMI1 when an HDMI-CEC device can only wake the TV if its input was active.",
+          "ir_state_tracking": "Enable after configuring an external IR receiver to call the lg_netcast_hdcp.process_ir_key action. This improves input and mute tracking and removes the state limitation warning."
         }
       }
     },
@@ -78,7 +82,14 @@
       "invalid_action": "The turn-on action is not valid.",
       "invalid_mac": "Enter a valid MAC address.",
       "invalid_sources": "Input sources must be a mapping of names to non-empty key sequences.",
-      "mac_required": "Enter the TV's MAC address to use Wake-on-LAN."
+      "mac_required": "Enter the TV's MAC address to use Wake-on-LAN.",
+      "unknown_source": "Select a source that exists in the input sources mapping."
+    }
+  },
+  "issues": {
+    "state_not_tracked": {
+      "title": "TV state is not fully tracked",
+      "description": "The integration can query power, the current channel, and the TV UI mode, but it cannot read the active HDMI input or volume. Without an external IR receiver, input changes made with the TV remote are not tracked. If you use HDMI-CEC (for example an Apple TV), turning the TV off on another input with the TV remote may prevent the CEC device from waking it again. Set **Source before power off** to the CEC input, or configure an IR receiver and enable **IR receiver state tracking**."
     }
   }
 }

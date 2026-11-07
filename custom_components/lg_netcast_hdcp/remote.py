@@ -46,12 +46,19 @@ class LgNetcastHdcpRemote(RemoteEntity):
 
     async def async_send_command(self, command: Iterable[str], **kwargs) -> None:
         """Send one or more keys."""
+        commands = list(command)
+        tracker = self._entry.runtime_data.tracker
         try:
-            await self._client.async_send_sequence(list(command))
+            await self._client.async_send_sequence(commands)
         except HdcpAuthError as err:
+            tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
             raise HomeAssistantError(
                 "The TV rejected the pairing key; reauthentication is required"
             ) from err
         except HdcpError as err:
+            tracker.set_power(None)
             raise HomeAssistantError(f"Could not send the command: {err}") from err
+        else:
+            for key in commands:
+                tracker.process_sent_key(key)

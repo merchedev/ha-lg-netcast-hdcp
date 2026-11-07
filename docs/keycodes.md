@@ -16,21 +16,27 @@ experiments.
 The television parses the `HandleKeyInput` value as a **decimal number** and
 stops at the first non-digit character.
 
-The valid range is:
+The integration's raw-code range is:
 
 ```text
 00 – 99
 ```
+
+The tested television also accepted the confirmed three-digit direct-input
+codes listed below when they were sent as named keys. Arbitrary values above
+`99` are not accepted; `100`, for example, was rejected.
 
 Consequences:
 
 - `1A` is parsed as `1`, which is **channel down**.
 - `9A` is parsed as `9`, which is **mute**.
 - `A0` is parsed as `0`, which is **channel up**.
-- `100` is rejected because it has three digits.
+- `100` is rejected because it is not a valid key.
+- `206`, `204`, `233`, and `218` select HDMI1–HDMI4 when sent as named keys.
 
-Do not send letters expecting separate functions. The reliable codes are
-two-digit decimal strings.
+Do not send letters expecting separate functions. For raw user input, use
+two-digit decimal strings; for the confirmed direct-input keys, use their
+names.
 
 ## Confirmed codes
 
@@ -78,7 +84,10 @@ two-digit decimal strings.
 | `48` | AV mode | Cycles Cine/Game/etc. |
 | `49`–`56` | Unknown | |
 | `57` | Subtitle language | Cycles the subtitle language option |
-| `58`–`66` | Unknown | |
+| `58`–`63` | Unknown | |
+| `64` | Up | Confirmed on the 42LW650S-ZC |
+| `65` | Down | Confirmed on the 42LW650S-ZC |
+| `66` | Unknown | |
 | `67` | Home | |
 | `68` | OK | Duplicate of `35` |
 | `69` | Q.Menu toggle | Shows/hides Q.Menu |
@@ -96,6 +105,10 @@ two-digit decimal strings.
 | `97` | Blue | |
 | `98` | Unknown | |
 | `99` | Yellow | |
+| `204` | HDMI2 | Confirmed direct input |
+| `206` | HDMI1 | Confirmed direct input |
+| `218` | HDMI4 | Confirmed direct input |
+| `233` | HDMI3 | Confirmed direct input |
 
 ## Trailing letters are ignored
 
@@ -117,12 +130,11 @@ These were observed and are **not** separate functions:
 
 The following functions were not found:
 
-- Up and Down arrows
 - Back
 - Red and Green buttons
 - Menu and Guide
 - Play, Pause, and Stop
-- Direct inputs other than AV1
+- Direct inputs other than AV1, HDMI1, HDMI2, HDMI3, and HDMI4
 
 The unknown codes above may require a menu to be open, may be unused on this
 model, or may map to functions not tested. Do not assume they are safe to use
@@ -142,13 +154,25 @@ data:
 ```
 
 Put the TV on a live channel before testing number keys. Open a menu before
-testing navigation keys. Note that codes above `99` are rejected.
+testing navigation keys. Raw codes above `99` are rejected; use the confirmed
+named keys for direct inputs and Up/Down:
+
+```yaml
+action: remote.send_command
+target:
+  entity_id: remote.lg_tv_remote
+data:
+  command:
+    - HDMI1
+```
 
 ## Integration mapping
 
 The integration exposes only confirmed functions as buttons. The raw `remote`
 entity accepts decimal codes from `00` to `99`; letter codes are rejected to
-avoid the parser ambiguity described above.
+avoid the parser ambiguity described above. Confirmed three-digit direct-input
+codes are available through names such as `HDMI1` and `HDMI2`, and Up/Down are
+available as `UP` and `DOWN`.
 
 This model profile is `hdcp_2011`. Future models should add a new profile or a
 key override instead of changing the default map.

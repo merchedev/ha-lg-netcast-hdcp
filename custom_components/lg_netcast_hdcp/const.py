@@ -21,6 +21,8 @@ CONF_WOL_BROADCAST: Final = "wol_broadcast"
 CONF_WOL_PORT: Final = "wol_port"
 CONF_TURN_ON_ACTION: Final = "turn_on_action"
 CONF_INPUT_SOURCES: Final = "input_sources"
+CONF_POWER_OFF_SOURCE: Final = "power_off_source"
+CONF_IR_STATE_TRACKING: Final = "ir_state_tracking"
 
 TURN_ON_METHOD_NONE: Final = "none"
 TURN_ON_METHOD_WOL: Final = "wol"
@@ -38,6 +40,15 @@ DEFAULT_WOL_PORT: Final = 9
 WOL_MAC_PATTERN: Final = r"^[0-9A-Fa-f]{2}([:-]?[0-9A-Fa-f]{2}){5}$"
 RAW_KEY_PATTERN: Final = r"^\d{2}$"
 
+POWER_OFF_SOURCE_DELAY: Final = 2.0
+INVALID_CHANNEL_MAJOR: Final = "16368"
+INVALID_PHYSICAL_NUM: Final = "65535"
+NO_SUBCHANNEL: Final = "65535"
+
+SERVICE_PROCESS_IR_KEY: Final = "process_ir_key"
+ATTR_KEY: Final = "key"
+ISSUE_STATE_NOT_TRACKED: Final = "state_not_tracked"
+
 HDCP_ERROR: Final = "HDCPError"
 HDCP_ERROR_DETAIL: Final = "HDCPErrorDetail"
 HDCP_SESSION: Final = "session"
@@ -45,20 +56,25 @@ HDCP_ERROR_OK: Final = "200"
 
 AUTH_PATH: Final = "auth"
 COMMAND_PATH: Final = "dtv_wifirc"
+DATA_PATH: Final = "data"
 
 PAIRING_KEY_LENGTH: Final = 6
 PAIRING_KEY_PATTERN: Final = r"^[A-Za-z0-9]{6}$"
 
 __all__ = [
+    "ATTR_KEY",
     "AUTH_PATH",
     "COMMAND_PATH",
     "CONF_INPUT_SOURCES",
+    "CONF_IR_STATE_TRACKING",
     "CONF_PAIRING_KEY",
+    "CONF_POWER_OFF_SOURCE",
     "CONF_TURN_ON_ACTION",
     "CONF_TURN_ON_METHOD",
     "CONF_WOL_BROADCAST",
     "CONF_WOL_MAC",
     "CONF_WOL_PORT",
+    "DATA_PATH",
     "DEFAULT_PORT",
     "DEFAULT_TIMEOUT",
     "DEFAULT_TURN_ON_METHOD",
@@ -71,12 +87,18 @@ __all__ = [
     "HDCP_KEYS",
     "HDCP_KEY_ALIASES",
     "HDCP_SESSION",
+    "INVALID_CHANNEL_MAJOR",
+    "INVALID_PHYSICAL_NUM",
+    "ISSUE_STATE_NOT_TRACKED",
     "MANUFACTURER",
     "MODEL",
     "NAME",
+    "NO_SUBCHANNEL",
     "PAIRING_KEY_LENGTH",
     "PAIRING_KEY_PATTERN",
+    "POWER_OFF_SOURCE_DELAY",
     "RAW_KEY_PATTERN",
+    "SERVICE_PROCESS_IR_KEY",
     "TURN_ON_METHODS",
     "TURN_ON_METHOD_ACTION",
     "TURN_ON_METHOD_BOTH",

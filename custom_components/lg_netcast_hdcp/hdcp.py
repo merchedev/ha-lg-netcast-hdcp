@@ -14,6 +14,7 @@ import aiohttp
 from .const import (
     AUTH_PATH,
     COMMAND_PATH,
+    DATA_PATH,
     DEFAULT_PORT,
     DEFAULT_TIMEOUT,
     HDCP_ERROR,
@@ -114,6 +115,19 @@ class LgHdcpClient:
             if index < len(keys) - 1:
                 await asyncio.sleep(delay)
 
+    async def async_query_data(self, target: str) -> ElementTree.Element:
+        """Query a data target using the cached session."""
+        async with self._lock:
+            if self._session_id is None:
+                await self._async_authenticate_locked()
+
+            try:
+                return await self._async_query_data_locked(target)
+            except HdcpAuthError:
+                self._session_id = None
+                await self._async_authenticate_locked()
+                return await self._async_query_data_locked(target)
+
     async def async_close(self) -> None:
         """Drop the cached session.
 
@@ -150,22 +164,46 @@ class LgHdcpClient:
         )
         await self._post(COMMAND_PATH, body)
 
+    async def _async_query_data_locked(self, target: str) -> ElementTree.Element:
+        """Query a data target while the lock is held."""
+        if self._session_id is None:
+            raise HdcpAuthError("No active session")
+
+        return await self._request(
+            "GET",
+            DATA_PATH,
+            params={"target": target, "session": self._session_id},
+        )
+
     async def _post(self, path: str, body: str) -> ElementTree.Element:
         """POST an XML body and return the parsed envelope."""
+        return await self._request("POST", path, body=body)
+
+    async def _request(
+        self,
+        method: str,
+        path: str,
+        *,
+        body: str | None = None,
+        params: dict[str, str] | None = None,
+    ) -> ElementTree.Element:
+        """Send an HTTP request and return the parsed envelope."""
         url = f"http://{self.host}:{self._port}/hdcp/api/{path}"
         _LOGGER.debug("Sending HDCP request to %s", url)
 
         try:
-            async with self._session.post(
+            async with self._session.request(
+                method,
                 url,
-                data=body.encode(),
+                data=body.encode() if body is not None else None,
+                params=params,
                 headers=_HEADERS,
                 timeout=self._timeout,
             ) as response:
                 text = await response.text()
                 status = response.status
         except (aiohttp.ClientError, TimeoutError, OSError) as err:
-            self.last_error = str(err)
+            self.last_error = self._redact_secrets(str(err))
             raise HdcpConnectionError(f"Could not reach {self.host}") from err
 
         try:
@@ -178,7 +216,7 @@ class LgHdcpClient:
         detail = root.findtext(f".//{HDCP_ERROR_DETAIL}") or ""
 
         if error_code and error_code != HDCP_ERROR_OK:
-            self.last_error = detail or f"HDCP error {error_code}"
+            self.last_error = self._redact_secrets(detail or f"HDCP error {error_code}")
             if error_code in _AUTH_ERROR_CODES or "unauthorized" in detail.lower():
                 raise HdcpAuthError(self.last_error)
             raise HdcpProtocolError(self.last_error, code=error_code)
@@ -196,8 +234,16 @@ class LgHdcpClient:
         value_element = f"<value>{escape(value)}</value>" if value else ""
         return f"{_XML_DECLARATION}<auth><type>{auth_type}</type>{value_element}</auth>"
 
+    def _redact_secrets(self, value: str) -> str:
+        """Remove cached secrets from an error string."""
+        if self.pairing_key and self.pairing_key in value:
+            value = value.replace(self.pairing_key, "REDACTED")
+        if self._session_id and self._session_id in value:
+            value = value.replace(self._session_id, "REDACTED")
+        return value
+
     def _resolve_key(self, key: str) -> str:
-        """Resolve a key name or a two-digit hexadecimal code."""
+        """Resolve a named key or a two-digit decimal code."""
         candidate = str(key).strip().upper()
 
         if candidate in self.profile.keys:

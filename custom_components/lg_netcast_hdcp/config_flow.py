@@ -16,7 +16,9 @@ from homeassistant.util.network import is_host_valid
 
 from .const import (
     CONF_INPUT_SOURCES,
+    CONF_IR_STATE_TRACKING,
     CONF_PAIRING_KEY,
+    CONF_POWER_OFF_SOURCE,
     CONF_TURN_ON_ACTION,
     CONF_TURN_ON_METHOD,
     CONF_WOL_BROADCAST,
@@ -267,9 +269,28 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
             sources, source_error = self._normalize_sources(
                 user_input.get(CONF_INPUT_SOURCES)
             )
+            power_off_source = str(
+                user_input.get(CONF_POWER_OFF_SOURCE, "") or ""
+            ).strip()
+            ir_state_tracking = bool(user_input.get(CONF_IR_STATE_TRACKING, False))
 
             if source_error:
                 errors[CONF_INPUT_SOURCES] = source_error
+            elif power_off_source:
+                normalized_power_off_source = "".join(power_off_source.upper().split())
+                matching_source = next(
+                    (
+                        name
+                        for name in (sources or {})
+                        if "".join(name.upper().split()) == normalized_power_off_source
+                    ),
+                    None,
+                )
+                if matching_source is None:
+                    errors[CONF_POWER_OFF_SOURCE] = "unknown_source"
+                else:
+                    power_off_source = matching_source
+
             if not isinstance(action, list) or not all(
                 isinstance(item, dict) for item in action
             ):
@@ -298,6 +319,8 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
                         CONF_WOL_PORT: user_input.get(CONF_WOL_PORT, DEFAULT_WOL_PORT),
                         CONF_TURN_ON_ACTION: action,
                         CONF_INPUT_SOURCES: sources or {},
+                        CONF_POWER_OFF_SOURCE: power_off_source,
+                        CONF_IR_STATE_TRACKING: ir_state_tracking,
                     },
                 )
 
@@ -330,6 +353,14 @@ class LgNetcastHdcpOptionsFlow(OptionsFlow):
                         CONF_INPUT_SOURCES,
                         default=current.get(CONF_INPUT_SOURCES, {}),
                     ): selector.ObjectSelector(),
+                    vol.Optional(
+                        CONF_POWER_OFF_SOURCE,
+                        default=current.get(CONF_POWER_OFF_SOURCE, ""),
+                    ): cv.string,
+                    vol.Optional(
+                        CONF_IR_STATE_TRACKING,
+                        default=current.get(CONF_IR_STATE_TRACKING, False),
+                    ): selector.BooleanSelector(),
                 }
             ),
             errors=errors,

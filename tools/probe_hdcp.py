@@ -14,6 +14,7 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 from urllib import error, request
@@ -73,6 +74,11 @@ def _session(text: str) -> str | None:
     except ElementTree.ParseError:
         return None
     return root.findtext(".//session")
+
+
+def _redact_session(text: str) -> str:
+    """Hide session IDs in diagnostic output."""
+    return re.sub(r"<session>[^<]*</session>", "<session>REDACTED</session>", text)
 
 
 def _auth_body(auth_type: str, value: str | None = None) -> str:
@@ -137,7 +143,7 @@ def main() -> None:
         action="append",
         default=[],
         metavar="KEY",
-        help="Send a key name or two-digit hex code (repeatable)",
+        help="Send a key name or two-digit decimal code (repeatable)",
     )
     parser.add_argument(
         "--list-keys",
@@ -162,7 +168,7 @@ def main() -> None:
             args.timeout,
         )
         print(f"HTTP {status}")
-        print(text)
+        print(_redact_session(text))
         error_message = _parse_error(text)
         if error_message:
             raise SystemExit(error_message)
@@ -178,14 +184,14 @@ def main() -> None:
             args.timeout,
         )
         print(f"HTTP {status}")
-        print(text)
+        print(_redact_session(text))
         error_message = _parse_error(text)
         if error_message:
             raise SystemExit(error_message)
         session = _session(text)
         if not session:
             raise SystemExit("The TV did not return a session.")
-        print(f"Session: {session}")
+        print("Session acquired; the session ID is not printed.")
 
     if args.send:
         if not session:
@@ -203,7 +209,7 @@ def main() -> None:
                 args.timeout,
             )
             print(f"{key} -> {code}: HTTP {status}")
-            print(text)
+            print(_redact_session(text))
             error_message = _parse_error(text)
             if error_message:
                 raise SystemExit(error_message)

@@ -42,8 +42,10 @@ firmware 0001.0009):
 - Session response contains `<session>...</session>`.
 - Command body:
   `<?xml version="1.0" encoding="utf-8"?><command><session>SESSION</session><type>HandleKeyInput</type><value>CODE</value></command>`
-- Key codes are two-digit **decimal** strings from `00` to `99`. The TV parser
-  stops at the first non-digit, so `1A` is treated as `1` and `100` is invalid.
+- Raw key codes are two-digit **decimal** strings from `00` to `99`. The TV
+  parser stops at the first non-digit, so `1A` is treated as `1` and `100` is
+  invalid. The confirmed three-digit direct-input codes (`HDMI1`–`HDMI4`) and
+  Up/Down codes are exposed only as named keys.
 - The 42LW650S-ZC decimal map is recorded in `docs/keycodes.md`.
 - The session becomes invalid when the television enters standby. Re-run
   `AuthReq` with the stored pairing key after the television is powered on.
@@ -59,13 +61,19 @@ firmware 0001.0009):
 - `hdcp.py`: protocol client. Owns HTTP, XML parsing, pairing, session
   lifecycle, one automatic reauthentication retry, and key-code validation.
 - `config_flow.py`: manual host setup, pairing, reauthentication,
-  reconfiguration, and options for power-on behavior and input sequences.
+  reconfiguration, and options for power-on behavior, input sequences, source
+  before power off, and IR state tracking.
+- `coordinator.py`: polls the HDCP data endpoint for power, channel, channel
+  name, and UI mode.
+- `state.py`: shared best-known state tracker for commands, state polls, and
+  optional external IR key events.
 - `media_player.py`: TV entity. Power off, volume, mute, channel tuning,
-  configured input sources, and conditional power-on.
+  configured input sources, source-before-power-off, and conditional power-on.
 - `button.py`: remote-key buttons for common navigation, input, channel, and
   digit keys.
-- `remote.py`: generic key sender. Accepts names such as `VOLUME_UP` and raw
-  two-digit decimal codes from `00` to `99`.
+- `remote.py`: generic key sender. Accepts names such as `VOLUME_UP`, direct
+  input names such as `HDMI1`, and raw two-digit decimal codes from `00` to
+  `99`.
 - `wol.py`: Wake-on-LAN magic packet helper.
 - `profiles.py`: model/protocol profiles and key maps. Adding a model should
   mean adding a profile, not changing integration logic.
@@ -77,11 +85,12 @@ firmware 0001.0009):
 - Use `ConfigEntry` runtime data.
 - Use `async_get_clientsession(hass)`; do not create a client session per
   request.
-- Use an options flow for power-on behavior and input-source mappings.
+- Use an options flow for power-on behavior, input-source mappings, the
+  source-before-power-off setting, and IR state tracking.
 - Expose `TURN_ON` only when the user configured Wake-on-LAN or a custom action.
 - Never hardcode a user's MAC address, input names, input order, or IR action.
-- Use `assumed_state = True` because the TV does not report reliable power or
-  volume state.
+- Use `assumed_state = True` because the TV does not report the active HDMI
+  input or volume; power and channel are polled when available.
 - Keep config-entry data limited to host and pairing key. Sessions live in
   memory only.
 - Use translations for every user-facing config-flow string.

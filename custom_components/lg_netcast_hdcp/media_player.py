@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
@@ -12,15 +13,18 @@ from homeassistant.components.media_player import (
     MediaPlayerState,
     MediaType,
 )
+from homeassistant.const import STATE_UNKNOWN
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.service import async_call_from_config
 
 from . import LgNetcastHdcpConfigEntry
 from .const import (
     CONF_INPUT_SOURCES,
+    CONF_POWER_OFF_SOURCE,
     CONF_TURN_ON_ACTION,
     CONF_TURN_ON_METHOD,
     CONF_WOL_BROADCAST,
@@ -32,12 +36,14 @@ from .const import (
     DOMAIN,
     MANUFACTURER,
     MODEL,
+    POWER_OFF_SOURCE_DELAY,
     TURN_ON_METHOD_ACTION,
     TURN_ON_METHOD_BOTH,
     TURN_ON_METHOD_NONE,
     TURN_ON_METHOD_WOL,
 )
 from .hdcp import HdcpAuthError, HdcpError
+from .keys import direct_input_key
 from .wol import async_send_magic_packet
 
 _LOGGER = logging.getLogger(__name__)
@@ -59,13 +65,12 @@ async def async_setup_entry(
     async_add_entities([LgNetcastHdcpMediaPlayer(entry)])
 
 
-class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
+class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
     """Representation of an LG NetCast HDCP television."""
 
     _attr_assumed_state = True
     _attr_device_class = MediaPlayerDeviceClass.TV
     _attr_has_entity_name = True
-    _attr_media_content_type = MediaType.CHANNEL
     _attr_name = None
     _attr_should_poll = False
 
@@ -73,6 +78,7 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         """Initialize the media player."""
         self._entry = entry
         self._client = entry.runtime_data.client
+        self._tracker = entry.runtime_data.tracker
         self._options = entry.options
         self._attr_unique_id = f"{entry.unique_id or entry.entry_id}_media_player"
         self._attr_device_info = DeviceInfo(
@@ -84,21 +90,26 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         self._attr_state = MediaPlayerState.OFF
         self._attr_is_volume_muted = False
         self._attr_source: str | None = None
+        self._attr_media_channel: str | None = None
+        self._attr_media_title: str | None = None
 
     async def async_added_to_hass(self) -> None:
-        """Probe the TV and handle a rejected pairing key."""
+        """Register for tracker updates and restore the last state."""
         await super().async_added_to_hass()
+        self.async_on_remove(
+            self._tracker.async_add_listener(self._handle_tracker_update)
+        )
 
-        try:
-            await self._client.async_authenticate()
-        except HdcpAuthError:
-            _LOGGER.debug("The TV rejected the stored pairing key")
-            self._entry.async_start_reauth(self.hass)
-        except HdcpError:
-            _LOGGER.debug("The TV is not reachable during setup")
-        else:
-            self._attr_state = MediaPlayerState.ON
-            self.async_write_ha_state()
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._tracker.restore(
+                source=last_state.attributes.get("source"),
+                channel=last_state.attributes.get("media_channel"),
+                channel_name=last_state.attributes.get("media_title"),
+                muted=last_state.attributes.get("is_volume_muted"),
+                ui_mode=last_state.attributes.get("ui_mode"),
+            )
+
+        self._handle_tracker_update()
 
     @property
     def supported_features(self) -> MediaPlayerEntityFeature:
@@ -121,6 +132,34 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         return self._attr_source
 
     @property
+    def media_content_type(self) -> MediaType | None:
+        """Return the media type for the current channel."""
+        return MediaType.CHANNEL if self._attr_media_channel else None
+
+    @property
+    def media_content_id(self) -> str | None:
+        """Return the current channel."""
+        return self._attr_media_channel
+
+    @property
+    def media_channel(self) -> str | None:
+        """Return the current channel."""
+        return self._attr_media_channel
+
+    @property
+    def media_title(self) -> str | None:
+        """Return the current channel name."""
+        return self._attr_media_title
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        attributes: dict[str, Any] = {}
+        if self._tracker.power is True and self._tracker.ui_mode:
+            attributes["ui_mode"] = self._tracker.ui_mode
+        return attributes
+
+    @property
     def _turn_on_method(self) -> str:
         """Return the configured power-on method."""
         return self._options.get(CONF_TURN_ON_METHOD, DEFAULT_TURN_ON_METHOD)
@@ -130,6 +169,12 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         """Return configured input sources."""
         sources = self._options.get(CONF_INPUT_SOURCES, {})
         return sources if isinstance(sources, dict) else {}
+
+    @property
+    def _power_off_source(self) -> str:
+        """Return the source to select before power off."""
+        source = self._options.get(CONF_POWER_OFF_SOURCE, "")
+        return source.strip() if isinstance(source, str) else ""
 
     async def async_turn_on(self) -> None:
         """Power on the TV using the configured method."""
@@ -148,6 +193,8 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
         if method in (TURN_ON_METHOD_ACTION, TURN_ON_METHOD_BOTH):
             await self._async_run_turn_on_action()
 
+        self._tracker.set_power(True)
+
     async def _async_run_turn_on_action(self) -> None:
         """Run the configured custom turn-on action."""
         actions = self._options.get(CONF_TURN_ON_ACTION, [])
@@ -163,10 +210,41 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
             )
 
     async def async_turn_off(self) -> None:
-        """Turn the TV off."""
-        await self._async_send("POWER")
-        self._attr_state = MediaPlayerState.OFF
-        self.async_write_ha_state()
+        """Turn the TV off, optionally selecting a CEC source first."""
+        source = self._power_off_source
+        if source:
+            await self._async_select_power_off_source(source)
+
+        if await self._async_send("POWER"):
+            self._tracker.set_power(False)
+
+    async def _async_select_power_off_source(self, source: str) -> None:
+        """Select the configured source before entering standby."""
+        if source not in self._input_sources:
+            _LOGGER.debug(
+                "Power-off source %s is not in the input sources mapping",
+                source,
+            )
+            return
+
+        direct_key = direct_input_key(source)
+        if direct_key is not None:
+            if await self._async_send(direct_key):
+                await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
+                self._tracker.set_source(source)
+            return
+
+        sequence = self._input_sources.get(source)
+        if not sequence:
+            _LOGGER.debug(
+                "Power-off source %s has no direct key or configured sequence",
+                source,
+            )
+            return
+
+        if await self._async_send_sequence(sequence):
+            await asyncio.sleep(POWER_OFF_SOURCE_DELAY)
+            self._tracker.set_source(source)
 
     async def async_volume_up(self) -> None:
         """Increase the volume."""
@@ -178,22 +256,28 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
 
     async def async_mute_volume(self, mute: bool) -> None:
         """Toggle mute when the requested state differs."""
-        if mute == self._attr_is_volume_muted:
+        if mute == self._tracker.muted:
             return
 
         await self._async_send("MUTE")
-        self._attr_is_volume_muted = mute
-        self.async_write_ha_state()
 
     async def async_select_source(self, source: str) -> None:
-        """Run the configured key sequence for an input source."""
+        """Select an input source using a direct key or key sequence."""
+        if source not in self._input_sources:
+            raise HomeAssistantError(f"Unknown input source: {source}")
+
+        direct_key = direct_input_key(source)
+        if direct_key is not None:
+            if await self._async_send(direct_key):
+                self._tracker.set_source(source)
+            return
+
         sequence = self._input_sources.get(source)
         if not sequence:
             raise HomeAssistantError(f"Unknown input source: {source}")
 
-        await self._async_send_sequence(sequence)
-        self._attr_source = source
-        self.async_write_ha_state()
+        if await self._async_send_sequence(sequence):
+            self._tracker.set_source(source)
 
     async def async_play_media(
         self, media_type: MediaType | str, media_id: str, **kwargs: Any
@@ -210,28 +294,54 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity):
             [f"NUMBER_{digit}" for digit in digits] + ["OK"]
         )
 
-    async def _async_send(self, key: str) -> None:
+    async def async_process_ir_key(self, key: str) -> None:
+        """Update the assumed state from an external IR receiver key."""
+        if not self._tracker.process_ir_key(key):
+            raise HomeAssistantError(f"Unsupported IR key: {key}")
+
+    def _handle_tracker_update(self) -> None:
+        """Copy tracker state to Home Assistant attributes."""
+        power = self._tracker.power
+        if power is True:
+            self._attr_state = MediaPlayerState.ON
+        elif power is False:
+            self._attr_state = MediaPlayerState.OFF
+        else:
+            self._attr_state = STATE_UNKNOWN
+
+        self._attr_source = self._tracker.source
+        self._attr_media_channel = self._tracker.channel
+        self._attr_media_title = self._tracker.channel_name
+        self._attr_is_volume_muted = self._tracker.muted
+        self.async_write_ha_state()
+
+    async def _async_send(self, key: str) -> bool:
         """Send a single key and update the assumed state."""
+        success = False
         try:
             await self._client.async_send_key(key)
         except HdcpAuthError:
-            self._attr_state = MediaPlayerState.OFF
+            self._tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
         except HdcpError:
-            self._attr_state = MediaPlayerState.OFF
+            self._tracker.set_power(None)
         else:
-            self._attr_state = MediaPlayerState.ON
-        self.async_write_ha_state()
+            self._tracker.process_sent_key(key)
+            success = True
+        return success
 
-    async def _async_send_sequence(self, keys: list[str]) -> None:
+    async def _async_send_sequence(self, keys: list[str]) -> bool:
         """Send a key sequence and update the assumed state."""
+        success = False
         try:
             await self._client.async_send_sequence(keys)
         except HdcpAuthError:
-            self._attr_state = MediaPlayerState.OFF
+            self._tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
         except HdcpError:
-            self._attr_state = MediaPlayerState.OFF
+            self._tracker.set_power(None)
         else:
-            self._attr_state = MediaPlayerState.ON
-        self.async_write_ha_state()
+            for key in keys:
+                self._tracker.process_sent_key(key)
+            success = True
+        return success

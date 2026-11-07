@@ -38,6 +38,10 @@ BUTTONS: tuple[LgNetcastButtonDescription, ...] = (
     LgNetcastButtonDescription(
         key="right", name="Right", command="RIGHT", icon="mdi:arrow-right"
     ),
+    LgNetcastButtonDescription(key="up", name="Up", command="UP", icon="mdi:arrow-up"),
+    LgNetcastButtonDescription(
+        key="down", name="Down", command="DOWN", icon="mdi:arrow-down"
+    ),
     LgNetcastButtonDescription(
         key="channel_up",
         name="Channel up",
@@ -111,12 +115,17 @@ class LgNetcastHdcpButton(ButtonEntity):
 
     async def async_press(self) -> None:
         """Send the key to the TV."""
+        tracker = self._entry.runtime_data.tracker
         try:
             await self._client.async_send_key(self.entity_description.command)
         except HdcpAuthError as err:
+            tracker.set_power(None)
             self._entry.async_start_reauth(self.hass)
             raise HomeAssistantError(
                 "The TV rejected the pairing key; reauthentication is required"
             ) from err
         except HdcpError as err:
+            tracker.set_power(None)
             raise HomeAssistantError(f"Could not send the command: {err}") from err
+        else:
+            tracker.process_sent_key(self.entity_description.command)

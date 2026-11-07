@@ -7,7 +7,9 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from custom_components.lg_netcast_hdcp.const import (
     CONF_INPUT_SOURCES,
+    CONF_IR_STATE_TRACKING,
     CONF_PAIRING_KEY,
+    CONF_POWER_OFF_SOURCE,
     CONF_TURN_ON_ACTION,
     CONF_TURN_ON_METHOD,
     CONF_WOL_BROADCAST,
@@ -41,6 +43,11 @@ def mock_client():
             LgHdcpClient,
             "async_authenticate",
             new=AsyncMock(return_value="123456789"),
+        ),
+        patch.object(
+            LgHdcpClient,
+            "async_query_data",
+            new=AsyncMock(side_effect=HdcpConnectionError("off")),
         ),
         patch.object(
             LgHdcpClient,
@@ -232,12 +239,44 @@ async def test_options_flow_configures_action_and_sources(hass) -> None:
             CONF_WOL_PORT: 9,
             CONF_TURN_ON_ACTION: [action],
             CONF_INPUT_SOURCES: {"hdmi1": ["input", "left", "ok"]},
+            CONF_POWER_OFF_SOURCE: "hdmi1",
+            CONF_IR_STATE_TRACKING: True,
         },
     )
 
     assert result["type"] is FlowResultType.CREATE_ENTRY
     assert entry.options[CONF_TURN_ON_ACTION] == [action]
     assert entry.options[CONF_INPUT_SOURCES] == {"hdmi1": ["INPUT", "LEFT", "OK"]}
+    assert entry.options[CONF_POWER_OFF_SOURCE] == "hdmi1"
+    assert entry.options[CONF_IR_STATE_TRACKING] is True
+
+
+async def test_options_flow_rejects_unknown_power_off_source(hass) -> None:
+    """The source before power off must exist in the input sources."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={"host": HOST, CONF_PAIRING_KEY: KEY},
+        unique_id=HOST,
+    )
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            CONF_TURN_ON_METHOD: "none",
+            CONF_WOL_MAC: "",
+            CONF_WOL_BROADCAST: "255.255.255.255",
+            CONF_WOL_PORT: 9,
+            CONF_TURN_ON_ACTION: [],
+            CONF_INPUT_SOURCES: {"hdmi1": ["INPUT", "LEFT", "OK"]},
+            CONF_POWER_OFF_SOURCE: "hdmi2",
+            CONF_IR_STATE_TRACKING: False,
+        },
+    )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {CONF_POWER_OFF_SOURCE: "unknown_source"}
 
 
 async def test_reconfigure_flow_updates_host(hass, mock_client) -> None:

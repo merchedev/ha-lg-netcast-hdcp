@@ -21,14 +21,28 @@ SESSION = "123456789"
 NEW_SESSION = "123456789"
 
 
-def _response(session: str | None = None, error: str = "200") -> str:
+def _response(
+    session: str | None = None, error: str = "200", detail: str = "OK"
+) -> str:
     session_element = f"<session>{session}</session>" if session else ""
     return (
         '<?xml version="1.0" encoding="utf-8"?>'
         "<envelope>"
         f"<HDCPError>{error}</HDCPError>"
-        "<HDCPErrorDetail>OK</HDCPErrorDetail>"
+        f"<HDCPErrorDetail>{detail}</HDCPErrorDetail>"
         f"{session_element}"
+        "</envelope>"
+    )
+
+
+def _data_response(data: str, session: str = SESSION) -> str:
+    return (
+        '<?xml version="1.0" encoding="utf-8"?>'
+        "<envelope>"
+        "<HDCPError>200</HDCPError>"
+        "<HDCPErrorDetail>OK</HDCPErrorDetail>"
+        f"<session>{session}</session>"
+        f"{data}"
         "</envelope>"
     )
 
@@ -41,14 +55,17 @@ class FakeTv:
         self.session = SESSION
         self.next_session = NEW_SESSION
         self.commands: list[str] = []
+        self.data_requests: list[dict[str, str]] = []
         self.auth_requests = 0
         self.reject_first_command = False
+        self.reject_first_data = False
         self.malformed_response = False
 
     def app(self) -> web.Application:
         app = web.Application()
         app.router.add_post("/hdcp/api/auth", self.auth)
         app.router.add_post("/hdcp/api/dtv_wifirc", self.command)
+        app.router.add_get("/hdcp/api/data", self.data)
         return app
 
     async def auth(self, request: web.Request) -> web.Response:
@@ -83,6 +100,44 @@ class FakeTv:
             return web.Response(text=_response(error="401"), status=401)
 
         return web.Response(text=_response(self.next_session))
+
+    async def data(self, request: web.Request) -> web.Response:
+        self.data_requests.append(dict(request.query))
+
+        if self.reject_first_data:
+            self.reject_first_data = False
+            return web.Response(text=_response(error="401"), status=401)
+
+        if request.query.get("session") != self.next_session:
+            return web.Response(text=_response(error="401"), status=401)
+
+        target = request.query.get("target")
+        if target == "cur_channel":
+            return web.Response(
+                text=_data_response(
+                    "<data>"
+                    "<type>terrestrial</type>"
+                    "<major>21</major>"
+                    "<minor>65535</minor>"
+                    "<sourceIndex>1</sourceIndex>"
+                    "<physicalNum>47</physicalNum>"
+                    "<name>VEO 7</name>"
+                    "</data>"
+                )
+            )
+        if target == "context_ui":
+            return web.Response(text=_data_response("<mode>VolCh</mode>"))
+
+        return web.Response(
+            text=_response(
+                error="400",
+                detail=(
+                    f"Bad request for session {self.next_session} "
+                    f"and key {self.pairing_key}"
+                ),
+            ),
+            status=400,
+        )
 
 
 @pytest.fixture
@@ -131,16 +186,53 @@ async def test_authenticate_rejects_invalid_key(aiohttp_client) -> None:
 
 
 async def test_send_named_and_raw_keys(tv) -> None:
-    """Named keys and raw hex codes are converted correctly."""
+    """Named keys and raw decimal codes are converted correctly."""
     fake, client = tv
     await client.async_send_key("VOLUME_UP")
     await client.async_send_key("03")
     await client.async_send_key("09")
+    await client.async_send_key("HDMI1")
+    await client.async_send_key("UP")
 
-    assert len(fake.commands) == 3
+    assert len(fake.commands) == 5
     assert "<value>02</value>" in fake.commands[0]
     assert "<value>03</value>" in fake.commands[1]
     assert "<value>09</value>" in fake.commands[2]
+    assert "<value>206</value>" in fake.commands[3]
+    assert "<value>64</value>" in fake.commands[4]
+
+
+async def test_query_current_channel(tv) -> None:
+    """The data endpoint is queried with the cached session."""
+    fake, client = tv
+    root = await client.async_query_data("cur_channel")
+
+    assert root.findtext(".//data/major") == "21"
+    assert root.findtext(".//data/name") == "VEO 7"
+    assert fake.data_requests == [{"target": "cur_channel", "session": NEW_SESSION}]
+
+
+async def test_query_reauthenticates_once(tv) -> None:
+    """A rejected data session is renewed and the query is retried."""
+    fake, client = tv
+    fake.reject_first_data = True
+
+    root = await client.async_query_data("context_ui")
+
+    assert root.findtext(".//mode") == "VolCh"
+    assert fake.auth_requests == 2
+    assert len(fake.data_requests) == 2
+
+
+async def test_query_rejects_unsupported_target(tv) -> None:
+    """An unsupported data target becomes a protocol error."""
+    _, client = tv
+    with pytest.raises(HdcpProtocolError):
+        await client.async_query_data("volume_info")
+
+    assert client.last_error is not None
+    assert NEW_SESSION not in client.last_error
+    assert PAIRING_KEY not in client.last_error
 
 
 async def test_send_key_rejects_unknown_key(tv) -> None:

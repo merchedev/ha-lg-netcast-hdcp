@@ -91,11 +91,81 @@ A successful response echoes the session:
 A `200 OK` only means the request was accepted. The TV does not report whether a
 particular key was handled.
 
+## State queries
+
+While the TV is on, the 2011 firmware also exposes a data endpoint. The session
+from `AuthReq` is passed as a query parameter:
+
+```http
+GET /hdcp/api/data?target=cur_channel&session=123456789
+GET /hdcp/api/data?target=context_ui&session=123456789
+```
+
+Without a session the endpoint returns `401 Unauthorized`. The
+`dtv_wifirc` endpoint is POST-only; a GET query against it returns `406 Not
+Acceptable`.
+
+A valid current channel response looks like:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<envelope>
+  <HDCPError>200</HDCPError>
+  <HDCPErrorDetail>OK</HDCPErrorDetail>
+  <session>123456789</session>
+  <data>
+    <type>terrestrial</type>
+    <major>21</major>
+    <minor>65535</minor>
+    <sourceIndex>1</sourceIndex>
+    <physicalNum>47</physicalNum>
+    <name>VEO 7</name>
+  </data>
+</envelope>
+```
+
+`minor=65535` means there is no subchannel. On an external input or in some UI
+states the response contains sentinel values instead:
+
+```xml
+<data>
+  <type>satellite</type>
+  <major>16368</major>
+  <minor>65535</minor>
+  <sourceIndex>9</sourceIndex>
+  <physicalNum>65535</physicalNum>
+  <name></name>
+</data>
+```
+
+The sentinel values were identical for HDMI1 and HDMI4, so they identify an
+external input but not a specific HDMI port.
+
+`context_ui` returns the current UI mode:
+
+```xml
+<envelope>
+  <HDCPError>200</HDCPError>
+  <HDCPErrorDetail>OK</HDCPErrorDetail>
+  <session>123456789</session>
+  <mode>VolCh</mode>
+</envelope>
+```
+
+Observed modes on the tested model include `VolCh` for normal TV/HDMI viewing
+and `TouchPad` for the Home and guide overlays. `model_info` and `version_info`
+also work. `volume_info` returns `400 Bad Request` on this firmware and is not
+used.
+
 ## Key codes
 
 The television parses the value as a **decimal number** and stops at the first
-non-digit character. Send two-digit decimal strings from `00` to `99`; values
-above `99` and letter suffixes are not valid separate codes.
+non-digit character. The integration's raw-code input accepts two-digit decimal
+strings from `00` to `99`; letter suffixes are not valid separate codes.
+
+The tested model also accepts the following confirmed direct-input and vertical
+navigation codes. Use the named keys; the integration intentionally does not
+accept arbitrary three-digit raw codes.
 
 | Name | Code |
 |---|---|
@@ -107,6 +177,8 @@ above `99` and letter suffixes are not valid separate codes.
 | CHANNEL_DOWN | `01` |
 | LEFT | `07` |
 | RIGHT | `06` |
+| UP | `64` |
+| DOWN | `65` |
 | INPUT | `11` |
 | Q_MENU | `10` |
 | TIMER | `14` |
@@ -114,6 +186,10 @@ above `99` and letter suffixes are not valid separate codes.
 | OK | `68` |
 | EXIT | `40` |
 | HOME | `67` |
+| HDMI1 | `206` |
+| HDMI2 | `204` |
+| HDMI3 | `233` |
+| HDMI4 | `218` |
 | NUMBER_0 … NUMBER_9 | `16`–`19`, `20`–`25` |
 | BLUE | `97` |
 | YELLOW | `99` |
@@ -137,13 +213,16 @@ The HTTP server is part of the TV's running software and is not available in
 standby. Power-on requires one of:
 
 - IR (NEC LG codes),
-- Wake-on-LAN, if supported by the model,
+- Wake-on-LAN, if supported by the model. The tested 42LW650S-ZC (firmware
+  0001.0009) did **not** wake with a magic packet, so Wake-on-LAN support
+  cannot be assumed for 2011 models,
 - HDMI-CEC,
 - RS-232C (`ka 01 01` on the 42LW650S).
 
 The integration lets the user configure a Wake-on-LAN packet or a custom Home
 Assistant action (IR, CEC, RS-232C, or a script) for power-on. If neither is
-configured, the turn-on feature is hidden.
+configured, the turn-on feature is hidden. Wake-on-LAN remains available for
+models where it is known to work.
 
 ## References
 
