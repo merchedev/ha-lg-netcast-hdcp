@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+- Fixed the state tracking repair issue so hassfest accepts its translation
+  schema.
+- Moved the full state limitation explanation into the repair flow, where the
+  television name is shown.
+- Added a regression test for the repair flow form.
+
 ## 0.6.0
 
 - Added a key selector to the IR state tracking service.

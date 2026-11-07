@@ -55,4 +55,7 @@ class EnableIrTrackingRepairFlow(RepairsFlow):
             ir.async_delete_issue(self.hass, DOMAIN, self._issue_id)
             return self.async_create_entry(data={})
 
-        return self.async_show_form(step_id="confirm")
+        return self.async_show_form(
+            step_id="confirm",
+            description_placeholders={"name": entry.title},
+        )

@@ -32,6 +32,11 @@ async def test_repair_flow_enables_ir_tracking(hass: HomeAssistant) -> None:
         {"entry_id": entry.entry_id},
     )
     flow.hass = hass
+    form = await flow.async_step_init()
+    assert form["type"] is FlowResultType.FORM
+    assert form["step_id"] == "confirm"
+    assert form["description_placeholders"] == {"name": "LG TV"}
+
     result = await flow.async_step_confirm(user_input={})
 
     assert result["type"] is FlowResultType.CREATE_ENTRY

@@ -89,7 +89,6 @@
   "issues": {
     "state_not_tracked": {
       "title": "TV state is not fully tracked",
-      "description": "The integration is not fully tracking {name}. It can query power, the current channel, and the TV UI mode, but it cannot read the active HDMI input or volume. Without an external IR receiver, input changes made with the TV remote are not tracked. If you use HDMI-CEC (for example an Apple TV), turning the TV off on another input with the TV remote may prevent the CEC device from waking it again. Set **Source before power off** to the CEC input, or configure an IR receiver and enable **IR receiver state tracking**.",
       "fix_flow": {
         "abort": {
           "entry_not_found": "The television config entry no longer exists."
@@ -97,7 +96,7 @@
         "step": {
           "confirm": {
             "title": "Enable IR receiver state tracking",
-            "description": "Only continue if you have configured an external IR receiver to call **lg_netcast_hdcp.process_ir_key**. This will enable **IR receiver state tracking** and remove the warning. If you do not have an IR receiver, cancel and dismiss the issue instead."
+            "description": "The integration is not fully tracking {name}. It can query power, the current channel, and the TV UI mode, but it cannot read the active HDMI input or volume. Without an external IR receiver, input changes made with the TV remote are not tracked. If you use HDMI-CEC (for example an Apple TV), turning the TV off on another input with the TV remote may prevent the CEC device from waking it again.\n\nSet **Source before power off** to the CEC input, or configure an IR receiver and enable **IR receiver state tracking**.\n\nOnly continue if you have configured an external IR receiver to call **lg_netcast_hdcp.process_ir_key**. If you do not have an IR receiver, cancel and dismiss the issue instead."
           }
         }
       }
