@@ -30,9 +30,14 @@ jobs:
           {
             gh --version
             gh auth status
-            gh release list --limit 20
-            gh release view v0.6.0 --json tagName,isDraft
-            gh release edit v0.6.0 --notes-file release-notes.md
+            if gh release view v0.6.0 >/dev/null 2>&1; then
+              gh release edit v0.6.0 --notes-file release-notes.md
+            else
+              gh release create v0.6.0 \
+                --verify-tag \
+                --title v0.6.0 \
+                --notes-file release-notes.md
+            fi
           } > gh-output.txt 2>&1
           status=$?
           cat gh-output.txt
