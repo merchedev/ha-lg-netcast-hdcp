@@ -31,7 +31,45 @@ CHANNEL_XML = (
     "<sourceIndex>1</sourceIndex>"
     "<physicalNum>47</physicalNum>"
     "<name>VEO 7</name>"
+    "<progName>Noticias</progName>"
     "</data>"
+    "</envelope>"
+)
+
+CHNAME_CHANNEL_XML = (
+    '<?xml version="1.0" encoding="utf-8"?>'
+    "<envelope>"
+    "<HDCPError>200</HDCPError>"
+    "<data>"
+    "<major>3</major>"
+    "<minor>65535</minor>"
+    "<physicalNum>4</physicalNum>"
+    "<chname>Veo</chname>"
+    "<progName>Noticias</progName>"
+    "</data>"
+    "</envelope>"
+)
+
+UNNAMED_CHANNEL_XML = (
+    '<?xml version="1.0" encoding="utf-8"?>'
+    "<envelope>"
+    "<HDCPError>200</HDCPError>"
+    "<data>"
+    "<major>3</major>"
+    "<minor>65535</minor>"
+    "<physicalNum>4</physicalNum>"
+    "<name></name>"
+    "<progName></progName>"
+    "</data>"
+    "</envelope>"
+)
+
+CHANNEL_LIST_XML = (
+    '<?xml version="1.0" encoding="utf-8"?>'
+    "<envelope>"
+    "<HDCPError>200</HDCPError>"
+    "<data><major>3</major><minor>65535</minor><chname>Veo</chname></data>"
+    "<data><major>21</major><minor>65535</minor><chname>VEO 7</chname></data>"
     "</envelope>"
 )
 
@@ -62,6 +100,7 @@ def _coordinator(
     tracker: TvStateTracker,
     channel_xml: str,
     context_xml: str | None = CONTEXT_XML,
+    channel_list_xml: str | None = None,
 ) -> LgNetcastHdcpCoordinator:
     """Create a coordinator with a fake data endpoint."""
     client = AsyncMock()
@@ -70,6 +109,10 @@ def _coordinator(
     def query(target: str) -> ElementTree.Element:
         if target == "cur_channel":
             return ElementTree.fromstring(channel_xml)
+        if target == "channel_list":
+            if channel_list_xml is None:
+                raise HdcpProtocolError("unsupported")
+            return ElementTree.fromstring(channel_list_xml)
         if context_xml is None:
             raise HdcpProtocolError("unsupported")
         return ElementTree.fromstring(context_xml)
@@ -90,13 +133,68 @@ async def test_valid_channel_updates_tracker(hass: HomeAssistant) -> None:
         power=True,
         channel="21",
         channel_name="VEO 7",
+        program_name="Noticias",
         ui_mode="VolCh",
     )
     assert tracker.power is True
     assert tracker.source is None
     assert tracker.channel == "21"
     assert tracker.channel_name == "VEO 7"
+    assert tracker.program_name == "Noticias"
     assert tracker.ui_mode == "VolCh"
+
+
+async def test_chname_fallback_updates_tracker(hass: HomeAssistant) -> None:
+    """The chname field is used when name is not present."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+    tracker = TvStateTracker()
+    coordinator = _coordinator(hass, entry, tracker, CHNAME_CHANNEL_XML)
+
+    data = await coordinator._async_update_data()
+
+    assert data.channel == "3"
+    assert data.channel_name == "Veo"
+    assert data.program_name == "Noticias"
+    assert tracker.channel_name == "Veo"
+    assert tracker.program_name == "Noticias"
+
+
+async def test_channel_list_fills_missing_name(hass: HomeAssistant) -> None:
+    """The channel list is used when cur_channel has no name."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+    tracker = TvStateTracker()
+    coordinator = _coordinator(
+        hass,
+        entry,
+        tracker,
+        UNNAMED_CHANNEL_XML,
+        channel_list_xml=CHANNEL_LIST_XML,
+    )
+
+    data = await coordinator._async_update_data()
+
+    assert data.channel == "3"
+    assert data.channel_name == "Veo"
+    assert tracker.channel_name == "Veo"
+
+
+async def test_channel_list_failure_is_not_retried(hass: HomeAssistant) -> None:
+    """An unsupported channel list is queried only once."""
+    entry = MockConfigEntry(domain=DOMAIN, data={}, options={})
+    tracker = TvStateTracker()
+    coordinator = _coordinator(hass, entry, tracker, UNNAMED_CHANNEL_XML)
+
+    first = await coordinator._async_update_data()
+    second = await coordinator._async_update_data()
+
+    assert first.channel_name is None
+    assert second.channel_name is None
+    channel_list_calls = [
+        query
+        for query in coordinator._client.async_query_data.await_args_list
+        if query.args == ("channel_list",)
+    ]
+    assert len(channel_list_calls) == 1
 
 
 async def test_invalid_channel_keeps_known_source(hass: HomeAssistant) -> None:

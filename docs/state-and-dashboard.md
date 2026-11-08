@@ -11,7 +11,9 @@ the channel and input details in attributes.
 | `state` | `on` / `off` / `unknown` | Power, polled or assumed |
 | `source` | `HDMI1` | Known input source |
 | `media_channel` | `21` | Current channel number |
-| `media_title` | `VEO 7`, `Channel 21`, or `HDMI1` | Channel name, channel fallback, or input fallback |
+| `media_title` | `VEO 7 · Noticias`, `VEO 7`, `Channel 21`, or `HDMI1` | Channel and program, channel fallback, or input fallback |
+| `channel_name` | `VEO 7` | Current channel name, when reported |
+| `program_name` | `Noticias` | Current program name, when reported |
 | `ui_mode` | `VolCh` / `TouchPad` | TV UI mode |
 | `is_volume_muted` | `true` / `false` | Mute, if known from IR |
 
@@ -56,8 +58,10 @@ type: media-control
 entity: media_player.lg_tv
 ```
 
-On live TV this shows the channel name (or “Channel 21”) and the channel number.
-On HDMI1 it shows the input fallback if the source is known.
+On live TV this shows the channel and program names when the TV reports them
+(for example `VEO 7 · Noticias`), or `Channel 21` when there is no name. The
+channel number appears as the secondary line. On HDMI1 it shows the input
+fallback if the source is known.
 
 ### Entities card with attributes
 
@@ -88,7 +92,8 @@ entities:
 type: markdown
 content: |
   **Channel:** {{ state_attr('media_player.lg_tv', 'media_channel') or '—' }}
-  **Name:** {{ state_attr('media_player.lg_tv', 'media_title') or '—' }}
+  **Name:** {{ state_attr('media_player.lg_tv', 'channel_name') or '—' }}
+  **Program:** {{ state_attr('media_player.lg_tv', 'program_name') or '—' }}
   **Source:** {{ state_attr('media_player.lg_tv', 'source') or 'TV' }}
   **UI:** {{ state_attr('media_player.lg_tv', 'ui_mode') or '—' }}
 ```
@@ -175,8 +180,10 @@ action:
   firmware. `is_volume_muted` can be tracked from IR.
 - The channel response is invalid in some UI states. The integration then
   shows no channel and keeps the last known source.
-- Attributes disappear when the media player is off, as with other Home
-  Assistant media players.
+- The channel and program names are best-effort. Some channels or firmware
+  revisions do not expose them; the integration then falls back to
+  `Channel <number>`.
+- Some attributes may keep their last known value while the TV is off.
 
 ## Accessibility
 

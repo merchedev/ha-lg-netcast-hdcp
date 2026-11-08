@@ -65,9 +65,9 @@ firmware 0001.0009):
 - `options_flow.py`: options for power-on behavior, input sequences, source
   before power off, and IR state tracking, split into sections.
 - `coordinator.py`: polls the HDCP data endpoint for power, channel, channel
-  name, and UI mode.
+  name, program name, and UI mode.
 - `state.py`: shared best-known state tracker for commands, state polls, and
-  optional external IR key events.
+  optional external IR key events, including channel and program names.
 - `repairs.py`: repair flow for the state tracking warning.
 - `media_player.py`: TV entity. Power off, volume, mute, channel tuning,
   configured input sources, source-before-power-off, and conditional power-on.

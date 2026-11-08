@@ -4,7 +4,7 @@ Start with the quick checks:
 
 - The TV is on and connected to the same network as Home Assistant.
 - TCP port `8080` is reachable from Home Assistant.
-- The integration version is 0.7.0 or newer.
+- The integration version is 0.7.1 or newer.
 - Home Assistant was restarted after updating through HACS.
 - You are looking at the media player attributes in
   **Developer Tools → States**, not only at the entity row.
@@ -103,6 +103,27 @@ The main media player state is power, not the channel. See
 On HDMI, `media_channel` is empty by design. The integration cannot tell which
 HDMI port is active from the data endpoint. Use the source selector, direct
 keys, or IR tracking.
+
+### The channel name shows as “Channel 3”
+
+The TV did not report a channel name in `cur_channel`. The integration reads
+`name`, `chname`, `inputSourceName`, and `labelName`, then tries `channel_list`
+once. If none of them contain the name, it falls back to `Channel <number>`.
+
+To see what the TV sends, enable debug logging:
+
+```yaml
+logger:
+  logs:
+    custom_components.lg_netcast_hdcp.coordinator: debug
+```
+
+Change to the affected channel and look for the `Channel data:` line. It
+contains the channel XML without the session ID. If the name is in a different
+field, include that line when reporting the issue.
+
+After changing channels from Home Assistant, the state refreshes after about
+three seconds. The channel number updates immediately.
 
 ### The channel is empty on an HDMI input
 

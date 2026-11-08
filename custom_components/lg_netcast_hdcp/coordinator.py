@@ -28,6 +28,7 @@ class TvData:
     power: bool
     channel: str | None = None
     channel_name: str | None = None
+    program_name: str | None = None
     ui_mode: str | None = None
 
 
@@ -52,6 +53,8 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
         self._client = client
         self._tracker = tracker
         self._offline_count = 0
+        self._channel_names: dict[str, str] = {}
+        self._channel_names_loaded = False
 
     async def _async_update_data(self) -> TvData:
         """Read the current channel and UI mode."""
@@ -75,13 +78,16 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
             return self._last_known_data(power=True)
 
         self._offline_count = 0
-        channel, channel_name = self._parse_channel(channel_root)
+        channel, channel_name, program_name = self._parse_channel(channel_root)
+        if channel and not channel_name:
+            channel_name = await self._async_lookup_channel_name(channel)
         ui_mode = await self._async_query_ui_mode()
 
         data = TvData(
             power=True,
             channel=channel,
             channel_name=channel_name,
+            program_name=program_name,
             ui_mode=ui_mode,
         )
         if channel is None:
@@ -89,6 +95,7 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
                 power=True,
                 channel=None,
                 channel_name=None,
+                program_name=None,
                 ui_mode=ui_mode,
             )
         else:
@@ -97,6 +104,7 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
                 source=None,
                 channel=channel,
                 channel_name=channel_name,
+                program_name=program_name,
                 ui_mode=ui_mode,
             )
         return data
@@ -118,31 +126,100 @@ class LgNetcastHdcpCoordinator(DataUpdateCoordinator[TvData]):
             power=power,
             channel=self.data.channel,
             channel_name=self.data.channel_name,
+            program_name=self.data.program_name,
             ui_mode=self.data.ui_mode,
         )
+
+    async def _async_lookup_channel_name(self, channel: str) -> str | None:
+        """Look up a channel name when the current-channel response has none."""
+        if not self._channel_names_loaded:
+            await self._async_load_channel_names()
+        return self._channel_names.get(channel)
+
+    async def _async_load_channel_names(self) -> None:
+        """Load the channel list once and cache channel names."""
+        self._channel_names_loaded = True
+        try:
+            root = await self._client.async_query_data("channel_list")
+        except HdcpError as err:
+            _LOGGER.debug("Could not load the TV channel list: %s", err)
+            return
+
+        profile = self._client.profile
+        names: dict[str, str] = {}
+        for data in root.findall(".//data"):
+            major = self._find_text(data, "major", "displayMajor")
+            if not major or major == profile.invalid_channel_major:
+                continue
+
+            name = self._find_text(data, "chname", "name")
+            if not name:
+                continue
+
+            names[major] = name
+            minor = self._find_text(data, "minor", "displayMinor")
+            if minor and minor not in (
+                profile.no_subchannel,
+                profile.invalid_physical_num,
+                "65520",
+            ):
+                names[f"{major}.{minor}"] = name
+
+        self._channel_names = names
+        _LOGGER.debug("Loaded %d channel names from the TV", len(names))
+
+    @staticmethod
+    def _find_text(data: ElementTree.Element, *names: str) -> str | None:
+        """Return the first non-empty child text matching a tag name."""
+        wanted = {name.casefold() for name in names}
+        for child in data:
+            tag = child.tag.rsplit("}", 1)[-1].casefold()
+            if tag in wanted:
+                text = (child.text or "").strip()
+                if text:
+                    return text
+        return None
 
     def _parse_channel(
         self,
         root: ElementTree.Element,
-    ) -> tuple[str | None, str | None]:
+    ) -> tuple[str | None, str | None, str | None]:
         """Parse the current-channel response."""
         data = root.find(".//data")
         if data is None:
-            return None, None
+            return None, None, None
+
+        if _LOGGER.isEnabledFor(logging.DEBUG):
+            _LOGGER.debug(
+                "Channel data: %s",
+                ElementTree.tostring(data, encoding="unicode"),
+            )
 
         profile = self._client.profile
-        major = data.findtext("major")
-        minor = data.findtext("minor")
-        physical_num = data.findtext("physicalNum")
-        name = data.findtext("name") or None
+        major = self._find_text(data, "major", "displayMajor")
+        minor = self._find_text(data, "minor", "displayMinor")
+        physical_num = self._find_text(data, "physicalNum")
+        channel_name = self._find_text(
+            data,
+            "name",
+            "chname",
+            "inputSourceName",
+            "labelName",
+        )
+        program_name = self._find_text(
+            data,
+            "progName",
+            "programName",
+            "program",
+        )
 
         if (
             not major
             or major == profile.invalid_channel_major
             or physical_num == profile.invalid_physical_num
         ):
-            return None, None
+            return None, None, None
 
         if minor and minor != profile.no_subchannel:
-            return f"{major}.{minor}", name
-        return major, name
+            return f"{major}.{minor}", channel_name, program_name
+        return major, channel_name, program_name

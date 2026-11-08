@@ -90,7 +90,8 @@ You do **not** need an IR receiver for power, channel, or UI mode. It is optiona
 ## Features
 
 - Turn off the TV, control volume, mute, and tune to a channel by number.
-- Poll power, channel, channel name, and UI mode from the HDCP data endpoint.
+- Poll power, channel, channel name, program name, and UI mode from the HDCP
+  data endpoint.
 - Direct input keys for HDMI1–HDMI4 and AV1, available automatically in the
   source selector.
 - Buttons for Home, OK, Input, HDMI1–HDMI4, Left/Right/Up/Down, channels,
@@ -129,7 +130,9 @@ attributes:
 |---|---|
 | `source` | `HDMI1` |
 | `media_channel` | `21` |
-| `media_title` | `VEO 7`, `Channel 21`, or `HDMI1` |
+| `media_title` | `VEO 7 · Noticias`, `VEO 7`, `Channel 21`, or `HDMI1` |
+| `channel_name` | `VEO 7` |
+| `program_name` | `Noticias` |
 | `ui_mode` | `VolCh` or `TouchPad` |
 | `is_volume_muted` | `true` / `false` |
 

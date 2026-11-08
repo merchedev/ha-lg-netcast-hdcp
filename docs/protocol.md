@@ -120,6 +120,27 @@ A valid current channel response looks like:
     <sourceIndex>1</sourceIndex>
     <physicalNum>47</physicalNum>
     <name>VEO 7</name>
+    <progName>Noticias</progName>
+  </data>
+</envelope>
+```
+
+Firmware variants may expose the channel name in `name` or `chname`, the current
+program in `progName`, and an input label in `inputSourceName` or `labelName`.
+The integration reads all of these fields case-insensitively. If `cur_channel`
+has no channel name, it queries the channel list once and caches the mapping:
+
+```http
+GET /hdcp/api/data?target=channel_list&session=123456789
+```
+
+```xml
+<envelope>
+  <HDCPError>200</HDCPError>
+  <data>
+    <major>3</major>
+    <minor>65535</minor>
+    <chname>Veo</chname>
   </data>
 </envelope>
 ```
@@ -155,7 +176,11 @@ external input but not a specific HDMI port.
 Observed modes on the tested model include `VolCh` for normal TV/HDMI viewing
 and `TouchPad` for the Home and guide overlays. `model_info` and `version_info`
 also work. `volume_info` returns `400 Bad Request` on this firmware and is not
-used.
+used. `channel_list` support is firmware-dependent; the integration treats it
+as a best-effort fallback for channel names.
+
+Enable debug logging for `custom_components.lg_netcast_hdcp.coordinator` to log
+the `<data>` block from `cur_channel`. The session ID is not included.
 
 ## Key codes
 

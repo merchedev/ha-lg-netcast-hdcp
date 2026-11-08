@@ -1,6 +1,6 @@
 [project]
 name = "ha-lg-netcast-hdcp"
-version = "0.7.0"
+version = "0.7.1"
 description = "Home Assistant custom integration for LG NetCast 2.0 HDCP televisions"
 readme = "README.md"
 requires-python = ">=3.13"

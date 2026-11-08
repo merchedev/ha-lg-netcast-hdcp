@@ -201,6 +201,17 @@ After configuring the receiver, enable **IR receiver state tracking** to
 suppress the state limitation repair issue. You can also use the **Fix** action
 on that issue. The service works even when this option is off.
 
+## Upgrading from 0.7.0
+
+- `media_title` now combines the channel and program names when the TV reports
+  them, for example `VEO 7 · Noticias`.
+- `channel_name` and `program_name` are available as attributes.
+- Changing channels from Home Assistant schedules a state refresh after about
+  three seconds, so the name and program appear without waiting for the regular
+  poll.
+- If `cur_channel` has no name, the integration tries the TV channel list once.
+- Restart Home Assistant after updating through HACS.
+
 ## Upgrading from 0.6.2
 
 - The **Configure** dialog now opens a menu with **Power-on behavior**,

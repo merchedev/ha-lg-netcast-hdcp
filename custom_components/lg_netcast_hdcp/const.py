@@ -42,6 +42,7 @@ RAW_KEY_PATTERN: Final = r"^\d{2}$"
 
 POWER_OFF_SOURCE_DELAY: Final = 2.0
 POWER_ON_REFRESH_DELAY: Final = 15.0
+CHANNEL_REFRESH_DELAY: Final = 3.0
 
 SERVICE_PROCESS_IR_KEY: Final = "process_ir_key"
 ATTR_KEY: Final = "key"
@@ -62,6 +63,7 @@ PAIRING_KEY_PATTERN: Final = r"^[A-Za-z0-9]{6}$"
 __all__ = [
     "ATTR_KEY",
     "AUTH_PATH",
+    "CHANNEL_REFRESH_DELAY",
     "COMMAND_PATH",
     "CONF_INPUT_SOURCES",
     "CONF_IR_STATE_TRACKING",

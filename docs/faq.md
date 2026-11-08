@@ -65,7 +65,23 @@ The main media player state is power. The channel and source are attributes.
 Check **Developer Tools → States → `media_player.lg_tv` → attributes**.
 
 The media-control card shows `media_title` and `media_channel` when they are
-available. See [state-and-dashboard.md](state-and-dashboard.md).
+available. `media_title` combines the channel and program names, for example
+`VEO 7 · Noticias`. See [state-and-dashboard.md](state-and-dashboard.md).
+
+## Why does the channel show as “Channel 3” instead of its name?
+
+The TV did not include a channel name in the `cur_channel` response. The
+integration also reads `chname`, `progName`, and similar fields, then tries the
+TV channel list once. If none of them provide a name, it falls back to
+`Channel <number>`.
+
+After changing channels from Home Assistant, the integration refreshes the state
+about three seconds later. The channel number updates immediately; the name and
+program follow when the TV reports them.
+
+If the name never appears, enable debug logging for
+`custom_components.lg_netcast_hdcp.coordinator` and check the `Channel data:`
+line. It contains the channel XML without the session ID.
 
 ## Why is the channel empty on HDMI?
 

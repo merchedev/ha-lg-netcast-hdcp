@@ -36,12 +36,13 @@ def test_direct_input_key_updates_source() -> None:
         },
         {"HDMI1": "HDMI1", "HDMI2": "HDMI2"},
     )
-    tracker.apply(channel="21", channel_name="VEO 7")
+    tracker.apply(channel="21", channel_name="VEO 7", program_name="Noticias")
 
     assert tracker.process_ir_key("HDMI1") is True
     assert tracker.source == "HDMI1"
     assert tracker.channel is None
     assert tracker.channel_name is None
+    assert tracker.program_name is None
 
     assert tracker.process_ir_key("HDMI_2") is True
     assert tracker.source == "HDMI 2"
@@ -93,6 +94,18 @@ def test_channel_entry_resets_after_another_key() -> None:
     assert tracker.channel == "5"
 
 
+def test_channel_change_clears_program_name() -> None:
+    """Changing channels clears the stale program name."""
+    tracker = TvStateTracker()
+    tracker.apply(channel="21", channel_name="VEO 7", program_name="Noticias")
+
+    tracker.process_sent_key("NUMBER_3")
+
+    assert tracker.channel == "3"
+    assert tracker.channel_name is None
+    assert tracker.program_name is None
+
+
 def test_channel_up_and_down() -> None:
     """Channel up and down step the known channel."""
     tracker = TvStateTracker()
@@ -127,6 +140,7 @@ def test_restore_off_state() -> None:
         source="HDMI1",
         channel="21",
         channel_name="VEO 7",
+        program_name="Noticias",
         muted=True,
         ui_mode="VolCh",
     )
@@ -134,6 +148,7 @@ def test_restore_off_state() -> None:
     assert tracker.source == "HDMI1"
     assert tracker.channel == "21"
     assert tracker.channel_name == "VEO 7"
+    assert tracker.program_name == "Noticias"
     assert tracker.muted is True
     assert tracker.ui_mode == "VolCh"
 
@@ -154,13 +169,19 @@ def test_restore_does_not_override_fresh_tv_state() -> None:
     """Fresh channel data wins over the restored state."""
     tracker = TvStateTracker()
     tracker.set_power(True)
-    tracker.apply(channel="21", channel_name="VEO 7")
+    tracker.apply(channel="21", channel_name="VEO 7", program_name="Noticias")
 
-    tracker.restore(source="HDMI1", channel="22", channel_name="Other")
+    tracker.restore(
+        source="HDMI1",
+        channel="22",
+        channel_name="Other",
+        program_name="Other program",
+    )
 
     assert tracker.source is None
     assert tracker.channel == "21"
     assert tracker.channel_name == "VEO 7"
+    assert tracker.program_name == "Noticias"
 
 
 def test_listeners_fire_only_on_changes() -> None:

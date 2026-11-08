@@ -49,6 +49,7 @@ class TvStateTracker:
         self.source: str | None = None
         self.channel: str | None = None
         self.channel_name: str | None = None
+        self.program_name: str | None = None
         self.muted = False
         self.ui_mode: str | None = None
 
@@ -133,6 +134,7 @@ class TvStateTracker:
         source: Any = _UNSET,
         channel: Any = _UNSET,
         channel_name: Any = _UNSET,
+        program_name: Any = _UNSET,
         muted: Any = _UNSET,
         ui_mode: Any = _UNSET,
     ) -> None:
@@ -146,6 +148,8 @@ class TvStateTracker:
             self.channel = channel
         if channel_name is not _UNSET:
             self.channel_name = channel_name
+        if program_name is not _UNSET:
+            self.program_name = program_name
         if muted is not _UNSET:
             self.muted = muted
         if ui_mode is not _UNSET:
@@ -159,7 +163,12 @@ class TvStateTracker:
     def set_source(self, source: str | None, *, clear_channel: bool = True) -> None:
         """Set the current source, optionally clearing the channel."""
         if clear_channel:
-            self.apply(source=source, channel=None, channel_name=None)
+            self.apply(
+                source=source,
+                channel=None,
+                channel_name=None,
+                program_name=None,
+            )
         else:
             self.apply(source=source)
 
@@ -169,6 +178,7 @@ class TvStateTracker:
         source: str | None = None,
         channel: str | None = None,
         channel_name: str | None = None,
+        program_name: str | None = None,
         muted: bool | None = None,
         ui_mode: str | None = None,
     ) -> None:
@@ -180,6 +190,8 @@ class TvStateTracker:
                 self.channel = channel
             if isinstance(channel_name, str):
                 self.channel_name = channel_name
+            if isinstance(program_name, str):
+                self.program_name = program_name
 
         if isinstance(source, str) and (self.power is False or self.channel is None):
             self.source = source
@@ -214,6 +226,7 @@ class TvStateTracker:
             self.source = None
             self.channel = self._append_channel(key[-1], timestamp)
             self.channel_name = None
+            self.program_name = None
             self._key_buffer.clear()
             return
 
@@ -221,6 +234,7 @@ class TvStateTracker:
             self.source = None
             self.channel = self._step_channel(key)
             self.channel_name = None
+            self.program_name = None
             self._key_buffer.clear()
             return
 
@@ -228,6 +242,7 @@ class TvStateTracker:
             self.source = self._source_name_for_key(key, self._direct_input_keys[key])
             self.channel = None
             self.channel_name = None
+            self.program_name = None
             self._key_buffer.clear()
             return
 
@@ -235,6 +250,7 @@ class TvStateTracker:
             self.source = None
             self.channel = None
             self.channel_name = None
+            self.program_name = None
             self._key_buffer.clear()
             return
 
@@ -306,6 +322,7 @@ class TvStateTracker:
                 self.source = name
                 self.channel = None
                 self.channel_name = None
+                self.program_name = None
                 self._key_buffer.clear()
                 return
 
@@ -316,6 +333,7 @@ class TvStateTracker:
             self.source,
             self.channel,
             self.channel_name,
+            self.program_name,
             self.muted,
             self.ui_mode,
         )

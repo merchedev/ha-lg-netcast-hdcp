@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.1
+
+- Show the channel and program names together, for example
+  `VEO 7 · Noticias`, when the TV reports them.
+- Read `name`, `chname`, `progName`, `inputSourceName`, and `labelName` from the
+  current-channel response.
+- Fall back to the TV channel list when `cur_channel` has no channel name.
+- Refresh state about three seconds after changing channels from Home
+  Assistant, so the name and program appear promptly.
+- Expose `channel_name` and `program_name` attributes and restore them after a
+  restart.
+- Add channel-data debug logging without the session ID.
+- Add tests and documentation for channel and program names.
+
 ## 0.7.0
 
 - Split the options flow into **Power-on behavior**, **Input sources**, and

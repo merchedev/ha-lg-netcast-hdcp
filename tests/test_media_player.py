@@ -46,6 +46,7 @@ CHANNEL_XML = (
     "<sourceIndex>1</sourceIndex>"
     "<physicalNum>47</physicalNum>"
     "<name>VEO 7</name>"
+    "<progName>Noticias</progName>"
     "</data>"
     "</envelope>"
 )
@@ -131,7 +132,9 @@ async def test_channel_state_from_data_endpoint(
 
     assert state.state == STATE_ON
     assert state.attributes["media_channel"] == "21"
-    assert state.attributes["media_title"] == "VEO 7"
+    assert state.attributes["media_title"] == "VEO 7 · Noticias"
+    assert state.attributes["channel_name"] == "VEO 7"
+    assert state.attributes["program_name"] == "Noticias"
     assert state.attributes["ui_mode"] == "VolCh"
 
 
@@ -246,6 +249,31 @@ async def test_play_media_channel(hass: HomeAssistant, setup_integration) -> Non
 
     LgHdcpClient.async_send_sequence.assert_awaited_with(["NUMBER_1", "NUMBER_2", "OK"])
     assert hass.states.get(entity_id).attributes["media_channel"] == "12"
+    assert hass.states.get(entity_id).attributes["media_title"] == "Channel 12"
+
+
+async def test_channel_change_schedules_refresh(
+    hass: HomeAssistant, setup_integration
+) -> None:
+    """Tuning from Home Assistant schedules a prompt state refresh."""
+    entity_id = hass.states.async_entity_ids("media_player")[0]
+
+    with patch(
+        "custom_components.lg_netcast_hdcp.media_player.async_call_later",
+        return_value=lambda: None,
+    ) as schedule:
+        await hass.services.async_call(
+            "media_player",
+            "play_media",
+            {
+                "entity_id": entity_id,
+                "media_content_id": "12",
+                "media_content_type": "channel",
+            },
+            blocking=True,
+        )
+
+    schedule.assert_called_once()
 
 
 async def test_remote_send_command(hass: HomeAssistant, setup_integration) -> None:

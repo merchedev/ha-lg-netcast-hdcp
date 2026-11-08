@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import Any
 
 from homeassistant.components.media_player import (
@@ -24,6 +25,7 @@ from homeassistant.helpers.service import async_call_from_config
 
 from . import LgNetcastHdcpConfigEntry
 from .const import (
+    CHANNEL_REFRESH_DELAY,
     CONF_INPUT_SOURCES,
     CONF_POWER_OFF_SOURCE,
     CONF_TURN_ON_ACTION,
@@ -94,6 +96,7 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         self._attr_source: str | None = None
         self._attr_media_channel: str | None = None
         self._attr_media_title: str | None = None
+        self._channel_refresh_cancel: Callable[[], None] | None = None
 
     async def async_added_to_hass(self) -> None:
         """Register for tracker updates and restore the last state."""
@@ -101,15 +104,25 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         self.async_on_remove(
             self._tracker.async_add_listener(self._handle_tracker_update)
         )
+        self.async_on_remove(self._cancel_channel_refresh)
 
         if (last_state := await self.async_get_last_state()) is not None:
             last_channel = last_state.attributes.get("media_channel")
+            last_channel_name = last_state.attributes.get("channel_name")
+            last_program_name = last_state.attributes.get("program_name")
+            if last_channel_name is None and last_channel:
+                last_title = last_state.attributes.get("media_title")
+                if (
+                    isinstance(last_title, str)
+                    and " · " not in last_title
+                    and not last_title.startswith("Channel ")
+                ):
+                    last_channel_name = last_title
             self._tracker.restore(
                 source=last_state.attributes.get("source"),
                 channel=last_channel,
-                channel_name=(
-                    last_state.attributes.get("media_title") if last_channel else None
-                ),
+                channel_name=last_channel_name,
+                program_name=last_program_name,
                 muted=last_state.attributes.get("is_volume_muted"),
                 ui_mode=last_state.attributes.get("ui_mode"),
             )
@@ -167,6 +180,10 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         attributes: dict[str, Any] = {}
         if self._tracker.power is True and self._tracker.ui_mode:
             attributes["ui_mode"] = self._tracker.ui_mode
+        if self._tracker.channel_name:
+            attributes["channel_name"] = self._tracker.channel_name
+        if self._tracker.program_name:
+            attributes["program_name"] = self._tracker.program_name
         return attributes
 
     @property
@@ -378,6 +395,7 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
         await self._async_send_sequence(
             [f"NUMBER_{digit}" for digit in digits] + ["OK"]
         )
+        self._schedule_channel_refresh()
 
     async def async_process_ir_key(self, key: str) -> None:
         """Update the assumed state from an external IR receiver key."""
@@ -387,6 +405,26 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
                 translation_key="unsupported_ir_key",
                 translation_placeholders={"key": key},
             )
+
+    def _build_media_title(self) -> str | None:
+        """Compose the media title from the channel and program names."""
+        channel = self._tracker.channel
+        channel_name = self._tracker.channel_name
+        program_name = self._tracker.program_name
+
+        if channel_name and program_name:
+            if channel_name.casefold() != program_name.casefold():
+                return f"{channel_name} · {program_name}"
+            return channel_name
+        if channel_name:
+            return channel_name
+        if program_name:
+            return f"Channel {channel} · {program_name}" if channel else program_name
+        if channel:
+            return f"Channel {channel}"
+        if self._tracker.source:
+            return self._tracker.source
+        return None
 
     def _handle_tracker_update(self) -> None:
         """Copy tracker state to Home Assistant attributes."""
@@ -400,16 +438,33 @@ class LgNetcastHdcpMediaPlayer(MediaPlayerEntity, RestoreEntity):
 
         self._attr_source = self._tracker.source
         self._attr_media_channel = self._tracker.channel
-        if self._tracker.channel:
-            self._attr_media_title = (
-                self._tracker.channel_name or f"Channel {self._tracker.channel}"
-            )
-        elif self._tracker.source:
-            self._attr_media_title = self._tracker.source
-        else:
-            self._attr_media_title = None
+        self._attr_media_title = self._build_media_title()
         self._attr_is_volume_muted = self._tracker.muted
         self.async_write_ha_state()
+
+    def _cancel_channel_refresh(self) -> None:
+        """Cancel a pending refresh after a channel change."""
+        if self._channel_refresh_cancel is not None:
+            self._channel_refresh_cancel()
+            self._channel_refresh_cancel = None
+
+    def _schedule_channel_refresh(self) -> None:
+        """Refresh state shortly after the TV changes channel."""
+        self._cancel_channel_refresh()
+        self._channel_refresh_cancel = async_call_later(
+            self.hass,
+            CHANNEL_REFRESH_DELAY,
+            HassJob(
+                self._async_refresh_after_channel_change,
+                "LG TV state refresh after channel change",
+                cancel_on_shutdown=True,
+            ),
+        )
+
+    async def _async_refresh_after_channel_change(self, _now) -> None:
+        """Refresh the channel name and program after a channel change."""
+        self._channel_refresh_cancel = None
+        await self._entry.runtime_data.coordinator.async_request_refresh()
 
     async def _async_send(self, key: str) -> None:
         """Send a single key and update the assumed state."""
